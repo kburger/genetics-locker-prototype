@@ -64,6 +64,7 @@ import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.sail.nativerdf.NativeStore;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 
 /**
  * Spring context file.
@@ -170,6 +171,69 @@ public class RestApiContext extends WebMvcConfigurerAdapter {
             StoreManagerException {
         return new StoreManagerImpl();
     }
+    
+    @Bean(name = "orcidTokenUrl")    
+    public String orcidTokenUrl(@Value("${orcid.tokenUrl:nil}") 
+            String url) {
+        String orcidTokenUrl = null;
+        if (!url.contentEquals("nil")) {
+            orcidTokenUrl = url;           
+        }
+        return orcidTokenUrl;
+    }
+    
+    
+    @Bean(name = "orcidAuthorizeUrl")    
+    public String orcidAuthorizeUrl(@Value("${orcid.authorizeUrl:nil}") 
+            String url) {
+        String authorizeUrl = null;
+        if (!url.contentEquals("nil")) {
+            authorizeUrl = url;           
+        }
+        return authorizeUrl;
+    }
+    
+   
+    @Bean(name = "orcidClientId")    
+    public String orcidClientId(@Value("${orcid.clientId:nil}") 
+            String id) {
+        String clientId = null;
+        if (!id.contentEquals("nil")) {
+            clientId = id;           
+        }
+        return clientId;
+    }    
+    
+    @Bean(name = "orcidClientSecret")    
+    public String orcidClientSecret(@Value("${orcid.clientSecret:nil}") 
+            String secret) {
+        String clientSecret = null;
+        if (!secret.contentEquals("nil")) {
+            clientSecret = secret;           
+        }
+        return clientSecret;
+    }
+    
+    @Bean(name = "orcidGrantType")    
+    public String orcidGrantType(@Value("${orcid.grantType:nil}") 
+            String type) {
+        String grantType = null;
+        if (!type.contentEquals("nil")) {
+            grantType = type;           
+        }
+        return grantType;
+    }
+    
+    @Bean(name = "orcidRedirectUrl")    
+    public String orcidRedirectUrl(@Value("${orcid.redirectUrl:nil}") 
+            String url) {
+        String redirectUrl = null;
+        if (!url.contentEquals("nil")) {
+            redirectUrl = url;           
+        }
+        return redirectUrl;
+    }
+    
     @Override
     public void addResourceHandlers(final ResourceHandlerRegistry registry) {
         registry.setOrder(Integer.MIN_VALUE + 1).

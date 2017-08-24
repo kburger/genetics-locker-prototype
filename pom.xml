@@ -45,13 +45,13 @@
         <jackson.version>2.9.0.pr2</jackson.version>
         <rdf4j.version>2.2</rdf4j.version>
         <log4j.version>2.8.1</log4j.version>
-        <handlebars.version>4.0.6</handlebars.version>
+        <handlebars.version>4.0.6</handlebars.version>        
+        <gson.version>2.8.0</gson.version>
         <fairmetadata.version>0.1-beta</fairmetadata.version>
         <velocity.version>1.7</velocity.version>
         <snakeyaml.version>1.18</snakeyaml.version>
         <junit.version>4.12</junit.version>
-        <mockito.version>2.7.19</mockito.version>
-        
+        <mockito.version>2.7.19</mockito.version>        
         <plugin.mavenwar.version>3.0.0</plugin.mavenwar.version>
         <plugin.mavenlic.version>3.0</plugin.mavenlic.version>
         <plugin.coveralls.version>4.3.0</plugin.coveralls.version>
@@ -143,6 +143,11 @@
             <groupId>com.github.jknack</groupId>
             <artifactId>handlebars-springmvc</artifactId>
             <version>${handlebars.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
         </dependency>
         
         <!-- provided -->     

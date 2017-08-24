@@ -57,22 +57,28 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import nl.dtl.fairmetadata4j.io.MetadataException;
 import nl.dtl.fairmetadata4j.io.MetadataParserException;
+import nl.dtl.fairmetadata4j.model.AccessRights;
 import nl.dtl.fairmetadata4j.model.Agent;
 import nl.dtl.fairmetadata4j.model.CatalogMetadata;
 import nl.dtl.fairmetadata4j.model.DataRecordMetadata;
 import nl.dtl.fairmetadata4j.model.DatasetMetadata;
 import nl.dtl.fairmetadata4j.model.DistributionMetadata;
 import nl.dtl.fairmetadata4j.model.FDPMetadata;
+import nl.dtl.fairmetadata4j.model.Metadata;
 import nl.dtl.fairmetadata4j.utils.MetadataUtils;
 import nl.dtls.fairdatapoint.api.controller.utils.LoggerUtils;
 import nl.dtls.fairdatapoint.service.FairMetaDataService;
 import nl.dtls.fairdatapoint.service.FairMetadataServiceException;
+import nl.dtls.fairdatapoint.service.OrcidServiceException;
+import nl.dtls.fairdatapoint.service.impl.OrcidService;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFWriterRegistry;
 import org.springframework.http.HttpHeaders;
+import org.springframework.web.context.request.WebRequest;
 import springfox.documentation.annotations.ApiIgnore;
 
 /**
@@ -92,7 +98,11 @@ public class MetadataController {
             = LogManager.getLogger(MetadataController.class);
     @Autowired
     private FairMetaDataService fairMetaDataService;
-    private final ValueFactory valueFactory = SimpleValueFactory.getInstance();
+    @Autowired
+    private OrcidService orcidService;
+    private final ValueFactory valueFactory = SimpleValueFactory.getInstance();    
+    private static Metadata metadata;
+    private static String view;
 
     /**
      * To handle GET FDP metadata request. (Note:) The first value in the
@@ -165,6 +175,34 @@ public class MetadataController {
         mav.addObject("metadata", metadata);
         mav.addObject("jsonLd", MetadataUtils.getString(metadata,
                 RDFFormat.JSONLD, MetadataUtils.SCHEMA_DOT_ORG_MODEL));
+        return mav;
+    }
+    
+    @ApiIgnore
+    @RequestMapping(value = "/accessControl", method = RequestMethod.GET,
+            produces = MediaType.TEXT_HTML_VALUE)
+    public ModelAndView resloveAccessRightsORCID(HttpServletRequest request,
+            WebRequest webRequest) throws
+            FairMetadataServiceException, ResourceNotFoundException,
+            MetadataException, OrcidServiceException {
+        Map<String, String[]> params = webRequest.getParameterMap();
+        AccessRights accessRights = this.metadata.getAccessRights();
+        ModelAndView mav = new ModelAndView(this.view);
+        String code = params.get("code")[0];
+        IRI agentUrl = orcidService.getOrcidUri(code);
+        for (Agent agent : accessRights.getAuthorization().getAuthorizedAgent()) {
+            if (agent.getUri().equals(agentUrl)) {
+                mav.addObject("metadata", this.metadata);
+                mav.addObject("jsonLd", MetadataUtils.getString(this.metadata,
+                        RDFFormat.JSONLD));
+                return mav;
+            }
+        }
+        mav = new ModelAndView("accessDenied");
+        mav.addObject("error", 
+                "Sorry. You don't have access rights to see this content");
+        Agent publisher = this.metadata.getPublisher();
+        mav.addObject("publisher", publisher);
         return mav;
     }
 
@@ -353,10 +391,35 @@ public class MetadataController {
         String uri = getRequesedURL(request);
         DistributionMetadata metadata = fairMetaDataService.
                 retrieveDistributionMetaData(valueFactory.createIRI(uri));
+        return getModelAndView(metadata);
+    }
+    
+    private <T extends Metadata> ModelAndView getModelAndView(T metadata) 
+            throws MetadataException{
+        ModelAndView mav;
+        this.metadata = metadata;        
+        if (metadata instanceof FDPMetadata) {
+            this.view = "repository";
+            return new ModelAndView("login");
+        } else if (metadata instanceof CatalogMetadata) {
+            this.view = "catalog";
+        } else if (metadata instanceof DatasetMetadata) {
+            this.view = "dataset";
+        } else if (metadata instanceof DistributionMetadata) {
+            this.view = "distribution";
+        }
+        AccessRights accessRights = metadata.getAccessRights();
+        if (accessRights != null) {
+            mav = new ModelAndView("redirect:" +
+                    orcidService.getAuthorizeUrl());            
+            return mav;
+        }
+        mav = new ModelAndView(this.view);
         mav.addObject("metadata", metadata);
         mav.addObject("jsonLd", MetadataUtils.getString(metadata,
-                RDFFormat.JSONLD, MetadataUtils.SCHEMA_DOT_ORG_MODEL));
+                RDFFormat.JSONLD));
         return mav;
+        
     }
 
     /**

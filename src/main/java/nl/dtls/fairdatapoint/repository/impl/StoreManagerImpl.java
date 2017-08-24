@@ -76,8 +76,11 @@ public class StoreManagerImpl implements StoreManager {
         Preconditions.checkNotNull(uri, "URI must not be null.");
         LOGGER.info("Get statements for the URI <" + uri.toString() + ">");
         try (RepositoryConnection conn = getRepositoryConnection()) {
-            RepositoryResult<Statement> queryResult = conn.getStatements(uri,
-                    null, null, false);
+            RepositoryResult<Statement> queryResult = conn.getStatements(null,
+                    null, null, false, uri);
+            if (!queryResult.hasNext()) {
+                queryResult = conn.getStatements(uri, null, null, false);
+            }
             List<Statement> statements = new ArrayList();
             while (queryResult.hasNext()) {
                 statements.add(queryResult.next());

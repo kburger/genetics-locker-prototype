@@ -16,4 +16,11 @@ metadataProperties:
     publisherName: dtls
     language: http://id.loc.gov/vocabulary/iso639-1/en
     license: http://rdflicense.appspot.com/rdflicense/cc-by-nc-nd3.0
+orcid:
+    tokenUrl: https://orcid.org/oauth/token    
+    authorizeUrl: https://orcid.org/oauth/authorize
+    clientId: APP-2P194EDZ02TF7E4A
+    clientSecret: 04f6637f-37e3-48ad-9ba7-086c48c0ab65
+    grantType: authorization_code
+    redirectUrl: http://127.0.0.1:8084/fairdatapoint/fdp/accessControl
 
