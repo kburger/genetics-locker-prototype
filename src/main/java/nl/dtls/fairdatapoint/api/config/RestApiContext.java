@@ -64,7 +64,6 @@ import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.sail.nativerdf.NativeStore;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
 
 /**
  * Spring context file.
@@ -227,11 +226,28 @@ public class RestApiContext extends WebMvcConfigurerAdapter {
     @Bean(name = "orcidRedirectUrl")    
     public String orcidRedirectUrl(@Value("${orcid.redirectUrl:nil}") 
             String url) {
-        String redirectUrl = null;
         if (!url.contentEquals("nil")) {
-            redirectUrl = url;           
+            return null;           
         }
-        return redirectUrl;
+        return url;
+    }
+    
+    @Bean(name = "myconsentApiUrl")    
+    public String myconsentApiUrl(@Value("${myconsent.apiUrl:nil}") 
+            String url) {
+        if (!url.contentEquals("nil")) {
+            return null;         
+        }
+        return url;
+    }
+    
+    @Bean(name = "myconsentResearcherToken")    
+    public String myconsentResearcherToken(@Value("${myconsent.researcherToken:nil}") 
+            String token) {
+        if (!token.contentEquals("nil")) {
+            return null;           
+        }
+        return token;
     }
     
     @Override

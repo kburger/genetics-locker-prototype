@@ -44,6 +44,7 @@ import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.sail.Sail;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -124,4 +125,29 @@ public class RestApiTestContext extends WebMvcConfigurerAdapter  {
                 "http://rdflicense.appspot.com/rdflicense/cc-by-nc-nd3.0");
         return license;
     } 
+    
+    @Bean(name = "myconsentApiUrl")    
+    public String myconsentApiUrl() {
+        String url = "https://myconsent.nl/api/";
+        return url;
+    }
+    
+    @Bean(name = "myconsentResearcherToken")    
+    public String myconsentResearcherToken() {
+        String token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjFkZTc3MTkyZmU3ZTIyZDRkN2Uw"
+                + "ZGI5Y2FhMjZlMmY4OTQ1OTIxOTQxZDIyMjk3YmRhOTIxZjBlMDYzZjY3OWNkMzIyMDhkNmFkNjM4NjZj"
+                + "In0.eyJhdWQiOiIxIiwianRpIjoiMWRlNzcxOTJmZTdlMjJkNGQ3ZTBkYjljYWEyNmUyZjg5NDU5Mj"
+                + "E5NDFkMjIyOTdiZGE5MjFmMGUwNjNmNjc5Y2QzMjIwOGQ2YWQ2Mzg2NmMiLCJpYXQiOjE1MDI3MjA5Nz"
+                + "EsIm5iZiI6MTUwMjcyMDk3MSwiZXhwIjoxNTM0MjU2OTcxLCJzdWIiOiI1Iiwic2NvcGVzIjpbXX0."
+                + "OYfsgcP5KgH4IRZLfvwVObyARNNQwfxyvczM-BwrSWVUcR93w7FoXJPdIjTvKnNYls9WBgZ6w27tas"
+                + "CVuzYFfomIMMKe1NH4f_U66pdMa9IkubkJEyknHrn2utFxUKDkdMcrFVK7E2XmoNsfFzmhMsygOz5e"
+                + "3OGNrPjAULX1dUDzoQqEmEl4zxBDOBRnIJDJ53TtFklVVrgiA6bBUIjpqbn6eBtmUmr00PBwdhmr"
+                + "TC6SW4fOtH8SjhsMlVOXSr5TGjfb5y_JE9Xc-KDE_ITUzlPobdE0iwl4j7GtzBfMEed8QFzYsdPgPG-"
+                + "CEXkdIjRZeR6eIeKZc6V0M_rguORhQd6rJlD4EUssFsNR0HlTA5FCbI4ahuNv_NEADvRNCcX7--"
+                + "UrJaqfILfPFB4DrFAKs0PRslPppkYtNeQxBZL6l4JotwL0jEwvjdQyDeAzT3QYisFD2JnpH_kDOizUh"
+                + "QZmoA_gFHnWHGMVnkC1wTimiGdmuybwhiW8duybOXGwAAHtWH758dr8Rzue7AGrldluRA0zmPh55u2N"
+                + "xkBGd2xsH_7P61mWxsprwNrdYzNSystZKjwoY3Z4BwPziPGpTT-Xrr-weID8C2ibm2tC8hO7XXK4cB4V"
+                + "fhAglG9Yo2Hobticz1Lp0GTF0j8-qblXB8oJDExJTkS1JASRJWajk9kRB6s";
+        return token;
+    }
 }
