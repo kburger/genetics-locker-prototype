@@ -28,18 +28,14 @@
 package nl.dtls.fairdatapoint.service.impl;
 
 import com.google.gson.Gson;
+import com.mashape.unirest.http.exceptions.UnirestException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.net.ssl.HttpsURLConnection;
 import nl.dtls.fairdatapoint.service.OrcidServiceException;
@@ -100,9 +96,7 @@ public class OrcidService {
             params.put("client_secret", clientSecret);
             params.put("grant_type", grantType);
             params.put("redirect_uri", redirectUri);
-            params.put("code", code);
-            Set set = params.entrySet();
-            Iterator i = set.iterator();
+            params.put("code", code);    
             StringBuilder postData = new StringBuilder();
             for (Map.Entry<String, String> param : params.entrySet()) {
                 if (postData.length() != 0) {
@@ -110,30 +104,23 @@ public class OrcidService {
                 }
                 postData.append(URLEncoder.encode(param.getKey(), "UTF-8"));
                 postData.append('=');
-                postData.append(URLEncoder.encode(String.valueOf(
-                        param.getValue()), "UTF-8"));
+                postData.append(URLEncoder.encode(String.valueOf(param.getValue()), "UTF-8"));
             }
-            byte[] postDataBytes = postData.toString().getBytes("UTF-8");
             HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", 
-                    "application/x-www-form-urlencoded");
-            conn.setRequestProperty("Content-Length", 
-                    String.valueOf(postDataBytes.length));
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             conn.setDoOutput(true);
-            conn.getOutputStream().write(postDataBytes);
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream(), "UTF-8"));
+            conn.getOutputStream().write(postData.toString().getBytes("UTF-8"));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), 
+                    "UTF-8"));
             StringBuilder builder = new StringBuilder();
             for (String line = null; (line = reader.readLine()) != null;) {
                 builder.append(line).append("\n");
             }
             reader.close();
             conn.disconnect();
-            LOGGER.info("INSTAGRAM token returned: " + 
-                    builder.toString());
-            Map jsonJavaRootObject = new Gson().fromJson(builder.toString(), 
-                    Map.class);
+            LOGGER.info("ORCID response: " +  builder.toString());
+            Map jsonJavaRootObject = new Gson().fromJson(builder.toString(), Map.class);
             String orcid = (String) jsonJavaRootObject.get("orcid");
             String orcidUriPrefix = "http://orcid.org/";
             ValueFactory valueFactory = SimpleValueFactory.getInstance();
@@ -142,7 +129,7 @@ public class OrcidService {
             String msg = "Error getting orcid url." + ex.getMessage();
             LOGGER.error(code);
             throw (new OrcidServiceException(msg));
-        }
+        } 
         return orcidUri;
     }
 
