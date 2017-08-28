@@ -227,27 +227,27 @@ public class RestApiContext extends WebMvcConfigurerAdapter {
     public String orcidRedirectUrl(@Value("${orcid.redirectUrl:nil}") 
             String url) {
         if (!url.contentEquals("nil")) {
-            return null;           
+            return url;           
         }
-        return url;
+        return null;
     }
     
     @Bean(name = "myconsentApiUrl")    
     public String myconsentApiUrl(@Value("${myconsent.apiUrl:nil}") 
             String url) {
         if (!url.contentEquals("nil")) {
-            return null;         
+            return url;         
         }
-        return url;
+        return null;
     }
     
     @Bean(name = "myconsentResearcherToken")    
     public String myconsentResearcherToken(@Value("${myconsent.researcherToken:nil}") 
             String token) {
         if (!token.contentEquals("nil")) {
-            return null;           
+            return token;           
         }
-        return token;
+        return null;
     }
     
     @Override

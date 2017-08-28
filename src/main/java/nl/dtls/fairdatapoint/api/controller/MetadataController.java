@@ -73,7 +73,9 @@ import nl.dtl.fairmetadata4j.utils.MetadataUtils;
 import nl.dtls.fairdatapoint.api.controller.utils.LoggerUtils;
 import nl.dtls.fairdatapoint.service.FairMetaDataService;
 import nl.dtls.fairdatapoint.service.FairMetadataServiceException;
+import nl.dtls.fairdatapoint.service.MyconsentServiceException;
 import nl.dtls.fairdatapoint.service.OrcidServiceException;
+import nl.dtls.fairdatapoint.service.impl.MyconsentService;
 import nl.dtls.fairdatapoint.service.impl.OrcidService;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFWriterRegistry;
@@ -100,6 +102,8 @@ public class MetadataController {
     private FairMetaDataService fairMetaDataService;
     @Autowired
     private OrcidService orcidService;
+    @Autowired
+    private MyconsentService myconsentService;
     private final ValueFactory valueFactory = SimpleValueFactory.getInstance();    
     private static Metadata metadata;
     private static String view;
@@ -184,25 +188,46 @@ public class MetadataController {
     public ModelAndView resloveAccessRightsORCID(HttpServletRequest request,
             WebRequest webRequest) throws
             FairMetadataServiceException, ResourceNotFoundException,
-            MetadataException, OrcidServiceException {
+            MetadataException, OrcidServiceException, MyconsentServiceException {
         Map<String, String[]> params = webRequest.getParameterMap();
         AccessRights accessRights = this.metadata.getAccessRights();
-        ModelAndView mav = new ModelAndView(this.view);
         String code = params.get("code")[0];
         IRI agentUrl = orcidService.getOrcidUri(code);
+        boolean isVaidAgent = false;
+        boolean status = false;
+        // Check agent
         for (Agent agent : accessRights.getAuthorization().getAuthorizedAgent()) {
             if (agent.getUri().equals(agentUrl)) {
-                mav.addObject("metadata", this.metadata);
-                mav.addObject("jsonLd", MetadataUtils.getString(this.metadata,
-                        RDFFormat.JSONLD));
-                return mav;
+                isVaidAgent = true;
+                break;
             }
         }
-        mav = new ModelAndView("accessDenied");
-        mav.addObject("error", 
-                "Sorry. You don't have access rights to see this content");
-        Agent publisher = this.metadata.getPublisher();
-        mav.addObject("publisher", publisher);
+        // Check data access request status   
+        String rUrl = null;
+        if(accessRights.getAuthorization().getRequestURI() != null) {
+            rUrl = accessRights.getAuthorization().getRequestURI().toString();  
+        }              
+        // Default view is always denied access        
+        ModelAndView mav = new ModelAndView("accessDenied");
+        try {
+            status = myconsentService.getRequestStatus(rUrl);
+        } catch (IllegalArgumentException ex) {
+            mav.addObject("error", "Invalid data access request URL <" + rUrl + ">");
+            return mav;
+        }
+        if (isVaidAgent && status) {
+            mav = new ModelAndView(this.view);
+            mav.addObject("metadata", this.metadata);
+            mav.addObject("jsonLd", MetadataUtils.getString(this.metadata, RDFFormat.JSONLD));
+        } else if (!isVaidAgent) {
+            mav.addObject("error", "Sorry. You don't have access rights to see this content");
+            Agent publisher = this.metadata.getPublisher();
+            mav.addObject("publisher", publisher);
+        } else if (!status && rUrl != null) {
+            mav.addObject("error", "Sorry. You request to access data is still not approved by "
+                    + "the data owner");
+            mav.addObject("requestUrl", rUrl.replaceAll("api/", ""));
+        }
         return mav;
     }
 
