@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+        <!-- Optional theme -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+        <!-- Login -->
+        <link rel="stylesheet" href="fdp/resources/css/login.css" crossorigin="anonymous">
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous">
+        </script>
+        <title>Access denied</title>
+    </head>
+    <body>    
+        <blockquote class="blockquote">   
+		<p class="text-danger" style="max-width:750px;">
+			<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            		<span class="sr-only"></span>
+               		<b> Access denied : </b> 
+                        {{#if error}}
+                            {{error}}
+                        {{else}}
+                            You don't have access rights to view this content
+                        {{/if}} 
+                        {{#if requestUrl}}
+                            <br>
+                            <a target="_blank" href="{{requestUrl}}">Check data access request status</a>
+                        {{/if}}    
+        	</p>
+	</blockquote>
+
+        <br> 
+
+        {{#if publisher.uri}}
+        <div class="panel panel-info" style="max-width: 380px;">
+  		<div class="panel-heading"><strong>Request access rights from the publisher</strong></div>
+  		<div class="panel-body">
+			<dl class="row">
+				<dt class="col-sm-2">URL</dt>
+				<dd class="col-sm-10"><a target="_blank" href="{{publisher.uri}}">{{publisher.uri}}</a></dd>
+                                {{#if publisher.name}}
+				<dt class="col-sm-2">Name</dt>
+				<dd class="col-sm-10">{{literal publisher.name}}</dd>	
+                                {{/if}}
+                                {{#if publisher.mbox}}
+				<dt class="col-sm-2">Mbox</dt>
+				<dd class="col-sm-10"><a target="_blank" href="{{publisher.mbox}}">{{publisher.mbox}}</a></dd>	
+                                {{/if}}
+			</dl>		
+		</div>  
+        </div> 
+        {{/if}}
+    </body>
+</html>
