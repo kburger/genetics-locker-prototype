@@ -28,6 +28,9 @@
 package nl.dtls.fairdatapoint.service.impl;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -36,6 +39,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.net.ssl.HttpsURLConnection;
 import nl.dtls.fairdatapoint.service.OrcidServiceException;
@@ -90,46 +95,33 @@ public class OrcidService {
     public IRI getOrcidUri(@Nonnull String code) throws OrcidServiceException {
         IRI orcidUri = null;
         try {
-            URL url = new URL(orcidTokenUrl);
-            HashMap<String, String> params = new HashMap<>();
+            HashMap<String, Object> params = new HashMap<>();
             params.put("client_id", clientId);
             params.put("client_secret", clientSecret);
             params.put("grant_type", grantType);
             params.put("redirect_uri", redirectUri);
-            params.put("code", code);    
-            StringBuilder postData = new StringBuilder();
-            for (Map.Entry<String, String> param : params.entrySet()) {
-                if (postData.length() != 0) {
-                    postData.append('&');
-                }
-                postData.append(URLEncoder.encode(param.getKey(), "UTF-8"));
-                postData.append('=');
-                postData.append(URLEncoder.encode(String.valueOf(param.getValue()), "UTF-8"));
+            params.put("code", code);
+            //This REST call is bit hacky. The call returns 400 error if the content type is not set
+            HttpResponse<String> response = Unirest.post(orcidTokenUrl).queryString(params).
+                    header("Content-Type", "application/x-www-form-urlencoded")
+                    .asString();
+            if (response.getStatus() != 200) {
+                String msg = "Error getting orcid url. ORCID api returns " + response.getStatus()
+                        + " response status";
+                LOGGER.error(code);
+                throw (new OrcidServiceException(msg));
             }
-            HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            conn.setDoOutput(true);
-            conn.getOutputStream().write(postData.toString().getBytes("UTF-8"));
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), 
-                    "UTF-8"));
-            StringBuilder builder = new StringBuilder();
-            for (String line = null; (line = reader.readLine()) != null;) {
-                builder.append(line).append("\n");
-            }
-            reader.close();
-            conn.disconnect();
-            LOGGER.info("ORCID response: " +  builder.toString());
-            Map jsonJavaRootObject = new Gson().fromJson(builder.toString(), Map.class);
-            String orcid = (String) jsonJavaRootObject.get("orcid");
+            Gson gson = new Gson();
+            JsonObject jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
+            String orcid = jsonObject.get("orcid").getAsString();
             String orcidUriPrefix = "http://orcid.org/";
             ValueFactory valueFactory = SimpleValueFactory.getInstance();
             orcidUri = valueFactory.createIRI(orcidUriPrefix + orcid);
-        } catch (IOException ex) {
+        } catch (UnirestException ex) {
             String msg = "Error getting orcid url." + ex.getMessage();
             LOGGER.error(code);
             throw (new OrcidServiceException(msg));
-        } 
+        }
         return orcidUri;
     }
 
