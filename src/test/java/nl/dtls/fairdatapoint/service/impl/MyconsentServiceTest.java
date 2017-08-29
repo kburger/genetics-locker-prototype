@@ -32,6 +32,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.DirtiesContext;
@@ -68,6 +69,21 @@ public class MyconsentServiceTest {
         boolean expResult = true;
         boolean result = myconsentService.getRequestStatus(url);
         assertEquals(expResult, result);
+    }
+    
+    
+    /**
+     * Test of createRequestURL method, of class MyconsentService.
+     */
+    @Test
+    @Ignore
+    public void testCreateRequestURL() throws Exception {
+        LOGGER.info("Test : vaild createRequestURL");
+        String dsuid = "1";
+        String studyId = "1";
+        String description = "Test call";
+        String result = myconsentService.createRequestURL(dsuid, studyId, description);
+        assertNotNull(result);
     }
     
 }

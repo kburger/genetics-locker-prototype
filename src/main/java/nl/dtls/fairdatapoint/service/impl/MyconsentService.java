@@ -32,6 +32,8 @@ import com.google.gson.JsonObject;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import java.util.HashMap;
+import java.util.Map;
 import nl.dtls.fairdatapoint.service.MyconsentServiceException;
 import org.apache.logging.log4j.LogManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,7 +73,9 @@ public class MyconsentService {
             if(response.getStatus() != 200) {
                 throw (new IllegalArgumentException("Not valid request url"));
             }
-            JsonObject jsonObject = new Gson().fromJson(response.getBody(), JsonObject.class);
+            
+            Gson gson = new Gson(); 
+            JsonObject jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
             status = jsonObject.get("request").getAsJsonObject().get("status").getAsBoolean();
         } catch (UnirestException ex) {
             String msg = "Error querying myconsent API. " + ex.getMessage();
@@ -79,6 +83,34 @@ public class MyconsentService {
             throw (new MyconsentServiceException(msg));
         }
         return status;
-    }   
+    } 
+    
+    public String createRequestURL(String dsuid, String studyId, String description) 
+            throws MyconsentServiceException, IllegalArgumentException {
+        String id = null;
+        Map<String, String> data = new HashMap<>();
+        data.put("study_id", studyId);
+        data.put("dsuid", dsuid);
+        data.put("request_body", description);
+        Gson gson = new Gson(); 
+        String jsonBody = gson.toJson(data); 
+        try {
+            HttpResponse<String> response = Unirest.post(apiUrl + "request")
+                    .header("accept", "application/json")
+                    .header("Authorization", ("Bearer " + researcherToken))
+                    .body(jsonBody)
+                    .asString();
+            if(response.getStatus() != 200) {
+                throw (new IllegalArgumentException("Not valid request"));
+            }
+            JsonObject jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
+            id = jsonObject.get("request_id").getAsString();
+        } catch (UnirestException ex) {
+            String msg = "Error querying myconsent API. " + ex.getMessage();
+            LOGGER.error(msg);
+            throw (new MyconsentServiceException(msg));
+        }
+        return id;
+    } 
     
 }
