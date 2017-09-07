@@ -38,7 +38,6 @@ import nl.dtls.fairdatapoint.service.MyconsentServiceException;
 import org.apache.logging.log4j.LogManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 /**
@@ -61,6 +60,16 @@ public class MyconsentService {
     @Autowired
     @Qualifier("myconsentResearcherToken")
     private String researcherToken; 
+    
+    /**
+     * Get status of data access request status
+     * 
+     * @param url  Data access request URL (Required) 
+     * @return  Returns status of data access status
+     * 
+     * @throws MyconsentServiceException    Exception is thrown when GET request is invalid 
+     * @throws IllegalArgumentException Exception is thrown when response status is not 200 
+     */
     
     public boolean getRequestStatus(String url) throws MyconsentServiceException, 
             IllegalArgumentException {
@@ -85,9 +94,20 @@ public class MyconsentService {
         return status;
     } 
     
-    public String createRequestURL(String dsuid, String studyId, String description) 
+    /**
+     * Create data access request token on myconsent system and return request token
+     * 
+     * @param dsuid  Data record unique token (Required)
+     * @param description   Data access request description
+     * @param studyId Study token (Required) 
+     * @return  Returns data access request token
+     * 
+     * @throws MyconsentServiceException    Exception is thrown when GET request is invalid 
+     * @throws IllegalArgumentException Exception is thrown when response status is not 200 
+     */
+    public String createDataAccessRequest(String dsuid, String studyId, String description) 
             throws MyconsentServiceException, IllegalArgumentException {
-        String id = null;
+        String requestId = null;
         Map<String, String> data = new HashMap<>();
         data.put("study_id", studyId);
         data.put("dsuid", dsuid);
@@ -104,13 +124,89 @@ public class MyconsentService {
                 throw (new IllegalArgumentException("Not valid request"));
             }
             JsonObject jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
-            id = jsonObject.get("request_id").getAsString();
+            requestId = jsonObject.get("request_id").getAsString();
         } catch (UnirestException ex) {
             String msg = "Error querying myconsent API. " + ex.getMessage();
             LOGGER.error(msg);
             throw (new MyconsentServiceException(msg));
         }
-        return id;
+        return requestId;
+    }
+    
+    /**
+     * Create data-source entry on myconsent system and return dsid
+     * 
+     * @param name  Data source name (Required)
+     * @param description   Data source description
+     * @param email Data source email (Required) 
+     * @return  Returns data source token (dsid)
+     * 
+     * @throws MyconsentServiceException    Exception is thrown when POST request is invalid 
+     * @throws IllegalArgumentException Exception is thrown when response status is not 200 
+     */
+    public String createDataSource(String name, String description, String email) 
+            throws MyconsentServiceException, IllegalArgumentException {
+        String dsid = null;
+        Map<String, String> data = new HashMap<>();
+        data.put("name", name);
+        data.put("description", description);
+        data.put("email", email);
+        Gson gson = new Gson(); 
+        String jsonBody = gson.toJson(data); 
+        try {
+            HttpResponse<String> response = Unirest.post(apiUrl + "data-source")
+                    .header("accept", "application/json")
+                    .header("Authorization", ("Bearer " + researcherToken))
+                    .body(jsonBody)
+                    .asString();
+            if(response.getStatus() != 200) {
+                throw (new IllegalArgumentException("Not valid request"));
+            }
+            JsonObject jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
+            dsid = jsonObject.get("dsid").getAsString();
+        } catch (UnirestException ex) {
+            String msg = "Error querying myconsent API. " + ex.getMessage();
+            LOGGER.error(msg);
+            throw (new MyconsentServiceException(msg));
+        }
+        return dsid;
     } 
+    
+    /**
+     * Create data record entry on myconsent system and return token which use to link data record
+     * to user account
+     * 
+     * @param dsid  Data source unique token (Required)
+     * @param foreignKey   Local reference of data record 
+     * @return  Returns token
+     * 
+     * @throws MyconsentServiceException    Exception is thrown when POST request is invalid 
+     * @throws IllegalArgumentException Exception is thrown when response status is not 200 
+     */
+    public String createDataRecord(String dsid, String foreignKey) 
+            throws MyconsentServiceException, IllegalArgumentException {
+        String token = null;
+        Map<String, String> data = new HashMap<>();
+        data.put("foreign_key", foreignKey);
+        Gson gson = new Gson(); 
+        String jsonBody = gson.toJson(data); 
+        try {
+            HttpResponse<String> response = Unirest.post(apiUrl + "data-source/" + dsid + "/record")
+                    .header("accept", "application/json")
+                    .header("Authorization", ("Bearer " + researcherToken))
+                    .body(jsonBody)
+                    .asString();
+            if(response.getStatus() != 200) {
+                throw (new IllegalArgumentException("Not valid request"));
+            }
+            JsonObject jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
+            token = jsonObject.get("token").getAsString();
+        } catch (UnirestException ex) {
+            String msg = "Error querying myconsent API. " + ex.getMessage();
+            LOGGER.error(msg);
+            throw (new MyconsentServiceException(msg));
+        }
+        return token;
+    }
     
 }

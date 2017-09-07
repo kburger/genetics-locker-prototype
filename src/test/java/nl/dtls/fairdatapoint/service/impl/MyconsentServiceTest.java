@@ -73,7 +73,7 @@ public class MyconsentServiceTest {
     
     
     /**
-     * Test of createRequestURL method, of class MyconsentService.
+     * Test of createDataAccessRequest method, of class MyconsentService.
      */
     @Test
     @Ignore
@@ -82,7 +82,7 @@ public class MyconsentServiceTest {
         String dsuid = "1";
         String studyId = "1";
         String description = "Test call";
-        String result = myconsentService.createRequestURL(dsuid, studyId, description);
+        String result = myconsentService.createDataAccessRequest(dsuid, studyId, description);
         assertNotNull(result);
     }
     
