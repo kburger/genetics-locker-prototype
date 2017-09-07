@@ -462,9 +462,13 @@ public class MetadataController {
         metadata.setParentURI(fdpURI);
         // Ignore children links
         metadata.setDatasets(new ArrayList());
-        fairMetaDataService.storeCatalogMetaData(metadata);
+        String dsid = fairMetaDataService.storeCatalogMetaData(metadata);
         response.addHeader(HttpHeaders.LOCATION, uri.toString());
-        return "Metadata is stored";
+        String msg = "Metadata is stored.";
+        if (dsid != null) {
+            msg = msg + " Myconsent dsid = " + dsid;
+        }
+        return msg;
     }
 
     /**
@@ -492,9 +496,13 @@ public class MetadataController {
         metadata.setUri(uri);
         // Ignore children links 
         metadata.setDistributions(new ArrayList());
-        fairMetaDataService.storeDatasetMetaData(metadata);
+        String token = fairMetaDataService.storeDatasetMetaData(metadata);
         response.addHeader(HttpHeaders.LOCATION, uri.toString());
-        return "Metadata is stored";
+        String msg = "Metadata is stored.";
+        if (token != null) {
+            msg = msg + " Myconsent token = " + token;
+        }
+        return msg;
     }
 
     /**

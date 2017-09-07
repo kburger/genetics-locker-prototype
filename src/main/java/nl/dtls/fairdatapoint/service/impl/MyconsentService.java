@@ -116,6 +116,7 @@ public class MyconsentService {
         String jsonBody = gson.toJson(data); 
         try {
             HttpResponse<String> response = Unirest.post(apiUrl + "request")
+                    .header("Content-Type", "application/json")
                     .header("accept", "application/json")
                     .header("Authorization", ("Bearer " + researcherToken))
                     .body(jsonBody)
@@ -150,11 +151,12 @@ public class MyconsentService {
         Map<String, String> data = new HashMap<>();
         data.put("name", name);
         data.put("description", description);
-        data.put("email", email);
+        data.put("researcher_email", email);
         Gson gson = new Gson(); 
         String jsonBody = gson.toJson(data); 
         try {
             HttpResponse<String> response = Unirest.post(apiUrl + "data-source")
+                    .header("Content-Type", "application/json")
                     .header("accept", "application/json")
                     .header("Authorization", ("Bearer " + researcherToken))
                     .body(jsonBody)
@@ -192,6 +194,7 @@ public class MyconsentService {
         String jsonBody = gson.toJson(data); 
         try {
             HttpResponse<String> response = Unirest.post(apiUrl + "data-source/" + dsid + "/record")
+                    .header("Content-Type", "application/json")
                     .header("accept", "application/json")
                     .header("Authorization", ("Bearer " + researcherToken))
                     .body(jsonBody)

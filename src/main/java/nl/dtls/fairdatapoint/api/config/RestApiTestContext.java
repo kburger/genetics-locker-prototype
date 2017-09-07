@@ -134,20 +134,7 @@ public class RestApiTestContext extends WebMvcConfigurerAdapter  {
     
     @Bean(name = "myconsentResearcherToken")    
     public String myconsentResearcherToken() {
-        String token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjFkZTc3MTkyZmU3ZTIyZDRkN2Uw"
-                + "ZGI5Y2FhMjZlMmY4OTQ1OTIxOTQxZDIyMjk3YmRhOTIxZjBlMDYzZjY3OWNkMzIyMDhkNmFkNjM4NjZj"
-                + "In0.eyJhdWQiOiIxIiwianRpIjoiMWRlNzcxOTJmZTdlMjJkNGQ3ZTBkYjljYWEyNmUyZjg5NDU5Mj"
-                + "E5NDFkMjIyOTdiZGE5MjFmMGUwNjNmNjc5Y2QzMjIwOGQ2YWQ2Mzg2NmMiLCJpYXQiOjE1MDI3MjA5Nz"
-                + "EsIm5iZiI6MTUwMjcyMDk3MSwiZXhwIjoxNTM0MjU2OTcxLCJzdWIiOiI1Iiwic2NvcGVzIjpbXX0."
-                + "OYfsgcP5KgH4IRZLfvwVObyARNNQwfxyvczM-BwrSWVUcR93w7FoXJPdIjTvKnNYls9WBgZ6w27tas"
-                + "CVuzYFfomIMMKe1NH4f_U66pdMa9IkubkJEyknHrn2utFxUKDkdMcrFVK7E2XmoNsfFzmhMsygOz5e"
-                + "3OGNrPjAULX1dUDzoQqEmEl4zxBDOBRnIJDJ53TtFklVVrgiA6bBUIjpqbn6eBtmUmr00PBwdhmr"
-                + "TC6SW4fOtH8SjhsMlVOXSr5TGjfb5y_JE9Xc-KDE_ITUzlPobdE0iwl4j7GtzBfMEed8QFzYsdPgPG-"
-                + "CEXkdIjRZeR6eIeKZc6V0M_rguORhQd6rJlD4EUssFsNR0HlTA5FCbI4ahuNv_NEADvRNCcX7--"
-                + "UrJaqfILfPFB4DrFAKs0PRslPppkYtNeQxBZL6l4JotwL0jEwvjdQyDeAzT3QYisFD2JnpH_kDOizUh"
-                + "QZmoA_gFHnWHGMVnkC1wTimiGdmuybwhiW8duybOXGwAAHtWH758dr8Rzue7AGrldluRA0zmPh55u2N"
-                + "xkBGd2xsH_7P61mWxsprwNrdYzNSystZKjwoY3Z4BwPziPGpTT-Xrr-weID8C2ibm2tC8hO7XXK4cB4V"
-                + "fhAglG9Yo2Hobticz1Lp0GTF0j8-qblXB8oJDExJTkS1JASRJWajk9kRB6s";
+        String token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjY1ZmJiNTExMTlkMzliZjljOGQ3ZmYyN2MyNTBjYTAyN2EwMTBhYWRlYTQ1MjY5NjFjN2FkMjQ1YjhjNjk5MWJjNWZlMDFmOWIwYzBiMzYwIn0.eyJhdWQiOiIxIiwianRpIjoiNjVmYmI1MTExOWQzOWJmOWM4ZDdmZjI3YzI1MGNhMDI3YTAxMGFhZGVhNDUyNjk2MWM3YWQyNDViOGM2OTkxYmM1ZmUwMWY5YjBjMGIzNjAiLCJpYXQiOjE1MDQwOTc2MTEsIm5iZiI6MTUwNDA5NzYxMSwiZXhwIjoxNTM1NjMzNjExLCJzdWIiOiIzIiwic2NvcGVzIjpbXX0.KkgRPvpop5U40W2AeL9i_2a_9LUqQnYR5qrkNkua3zsxBdHL-P8KTarjiadfIN4TkgzqVw0PIIpJf9_jVFfzxRzNk7a0EPfbGnsgl9yRjDSvKPLGBUK6YdrgCsMIIRap7n5dvG-9uy1sQkKJMXPbVAz0AMMxH5IScZkvnxWv_9wzlA83-hO_QR0hh4MvariLcsQmVsbjaNcgG67n53Jt_j_6G9xcq5EkgOC0E9Apa5TQcATmSQOeAro1QmCSdDVuQ740c6_DkxMBNf0Kd5odmYTAtmoHfcr1ES7LRtgaQXgNdvmsv0T07yMwkfk9Tre7V2Hfm7hyO_jH03kMvPGuoHCfSib1qkfw20fWoLig1YVlgxfFQOZiJgEBJokXPIT5TovQK-dCMCOQAb_qaujJ9EufZ7NQW5qccDnlcyBWCMyBA9AxSpIuzPNtwSbztVKnWgNWaLcoz0pMy-wxKXG64cI6XbJrdkL9FRfYSkObesbkw67ZNXAiNQSlensqdiWEScV7TzDdvQUDhc7iURmkMiuVHdjvsB-uu8IxA-DSc5k6BDWfFOc6mG7jhWmAPyPc6NIlCFHVaLrTPhwEIw2HKV588IGSroSftUkxl0ITl5jpWBt2JguVNGb5933BUuxaDrTR9PyCGRg5Jlln6o_606N5pqlvqi70J3zRiAJyRpE";
         return token;
     }
 }

@@ -57,9 +57,11 @@ import nl.dtls.fairdatapoint.repository.StoreManager;
 import nl.dtls.fairdatapoint.repository.StoreManagerException;
 import nl.dtls.fairdatapoint.service.FairMetaDataService;
 import nl.dtls.fairdatapoint.service.FairMetadataServiceException;
+import nl.dtls.fairdatapoint.service.MyconsentServiceException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
@@ -97,6 +99,11 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
     @Qualifier("license")
     private IRI license;
     
+    @Autowired
+    private MyconsentService myconsentService;
+    @Autowired
+    @Qualifier("myconsentApiUrl")
+    private String apiUrl;  
 
     @org.springframework.beans.factory.annotation.Value("${metadataProperties.rootSpecs:nil}")
     private String fdpSpecs;
@@ -171,7 +178,7 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
     }
 
     @Override
-    public void storeCatalogMetaData(@Nonnull CatalogMetadata metadata)
+    public String storeCatalogMetaData(@Nonnull CatalogMetadata metadata)
             throws FairMetadataServiceException, MetadataException {
         Preconditions.checkState(metadata.getParentURI() != null,
                 "No fdp URI is provied. Include dcterms:isPartOf statement "
@@ -182,7 +189,28 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
         if (!catalogSpecs.isEmpty()
                 && !catalogSpecs.contains("nil")) {
             metadata.setSpecification(valueFactory.createIRI(catalogSpecs));
+        }         
+        // Store catalog reference in myconsent 
+        String dsName = metadata.getTitle().getLabel();
+        String dsDescription = "Test call to create data source";;
+        String dsPublisherEmail = "test@test.com";
+        if (metadata.getDescription() != null ) {            
+            dsDescription = metadata.getDescription().getLabel();            
+        } 
+        if (metadata.getPublisher() != null && metadata.getPublisher().getMbox() != null) {
+            dsPublisherEmail =  metadata.getPublisher().getMbox().toString();
         }
+        String dsid = null;
+        try {
+            dsid = myconsentService.createDataSource(dsName, dsDescription, 
+                    dsPublisherEmail);
+            Identifier mId = new Identifier(); 
+            mId.setIdentifier(valueFactory.createLiteral(dsid, XMLSchema.STRING));
+            mId.setUri(valueFactory.createIRI(apiUrl + "data-source/" + dsid));
+            metadata.setIdentifier(mId);
+        } catch (MyconsentServiceException | IllegalArgumentException ex) {
+            LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());
+        }        
         if (doesParentResourceExists(metadata)) {
             storeMetadata(metadata);
         } else {
@@ -190,10 +218,11 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
                 + "Please try with valid fdp URI";
             throw new IllegalStateException(msg);
         } 
+        return dsid;
     }
 
     @Override
-    public void storeDatasetMetaData(@Nonnull DatasetMetadata metadata)
+    public String storeDatasetMetaData(@Nonnull DatasetMetadata metadata)
             throws FairMetadataServiceException, MetadataException {
         Preconditions.checkState(metadata.getParentURI() != null,
                 "No catalog URI is provied. Include dcterms:isPartOf statement "
@@ -205,13 +234,23 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
                 && !datasetSpecs.contains("nil")) {
             metadata.setSpecification(valueFactory.createIRI(datasetSpecs));
         }
+        // Store catalog reference in myconsent 
+        CatalogMetadata cMetadata = retrieveCatalogMetaData(metadata.getParentURI());
+        String token = null;
+        try {
+            String dsid = cMetadata.getIdentifier().getIdentifier().getLabel();
+            token = myconsentService.createDataRecord(dsid, metadata.getUri().toString());
+        } catch (MyconsentServiceException | IllegalArgumentException ex) {
+            LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());
+        }
         if (doesParentResourceExists(metadata)) {
             storeMetadata(metadata);
         } else {
             String msg = "The catalog URI provided is not of type dcat:Catalog "
                 + "Please try with valid catalog URI";
             throw new IllegalStateException(msg);
-        } 
+        }
+        return token;
     }
 
     @Override
