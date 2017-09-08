@@ -33,7 +33,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -202,8 +204,9 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
             metadata.setSpecification(valueFactory.createIRI(catalogSpecs));
         }         
         // Store catalog reference in myconsent 
-        String dsName = metadata.getTitle().getLabel();
-        String dsDescription = "Test call to create data source";;
+        String dsName = metadata.getTitle().getLabel();        
+        String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
+        String dsDescription = "Test call to create data source. Created time = " + timeStamp;
         String dsPublisherEmail = "test@test.com";
         if (metadata.getDescription() != null ) {            
             dsDescription = metadata.getDescription().getLabel();            
@@ -295,7 +298,8 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
             CatalogMetadata cMetadata = retrieveCatalogMetaData(dMetadata.getParentURI());
             try {
                 String dsid = cMetadata.getIdentifier().getIdentifier().getLabel();
-                String requestDescription = "Test request from fdp";
+                String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
+                String requestDescription = "Test request from fdp. Requested time = " +  timeStamp;
                 requestUrl = myconsentService.createDataAccessRequest(dsid, myConsentStudyId, 
                         dMetadata.getUri().toString(), requestDescription);
                 // Set request access url  
