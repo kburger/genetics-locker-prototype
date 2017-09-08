@@ -104,6 +104,7 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
     @Autowired
     @Qualifier("myconsentApiUrl")
     private String apiUrl;  
+    private String myConsentStudyId = "3";
 
     @org.springframework.beans.factory.annotation.Value("${metadataProperties.rootSpecs:nil}")
     private String fdpSpecs;
@@ -237,13 +238,13 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
         // Store catalog reference in myconsent 
         CatalogMetadata cMetadata = retrieveCatalogMetaData(metadata.getParentURI());
         String token = null;
-        try {
-            String dsid = cMetadata.getIdentifier().getIdentifier().getLabel();
-            token = myconsentService.createDataRecord(dsid, metadata.getUri().toString());
-        } catch (MyconsentServiceException | IllegalArgumentException ex) {
-            LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());
-        }
-        if (doesParentResourceExists(metadata)) {
+        if (doesParentResourceExists(metadata)) {            
+            try {
+                String dsid = cMetadata.getIdentifier().getIdentifier().getLabel();
+                token = myconsentService.createDataRecord(dsid, metadata.getUri().toString());
+            } catch (MyconsentServiceException | IllegalArgumentException ex) {
+                LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());
+            }
             storeMetadata(metadata);
         } else {
             String msg = "The catalog URI provided is not of type dcat:Catalog "
@@ -254,7 +255,7 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
     }
 
     @Override
-    public void storeDistributionMetaData(@Nonnull DistributionMetadata metadata)
+    public String storeDistributionMetaData(@Nonnull DistributionMetadata metadata)
             throws FairMetadataServiceException, MetadataException {
         Preconditions.checkState(metadata.getParentURI() != null,
                 "No dataset URI is provied. Include dcterms:isPartOf statement "
@@ -262,18 +263,45 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
         Preconditions.checkState(isSubjectURIExist(metadata.getParentURI()),
                 "The dataset URI doesn't exist in the repository. "
                 + "Please try with valid dataset URI");
+//        Preconditions.checkNotNull(metadata.getAccessRights(), "Access rights statements can't be"
+//                + " null. Pleease include rights statements");
+//        Preconditions.checkNotNull(metadata.getAccessRights().getAuthorization(), "Authorization "
+//                + "statements can't be null. Please include authorization statement");
+//        Preconditions.checkNotNull(metadata.getAccessRights().getAuthorization().
+//                getAuthorizedAgent(), "Authorization agent can't be null. Please include "
+//                        + "authorization agent url");
+//        Preconditions.checkState(!metadata.getAccessRights().getAuthorization().
+//                getAuthorizedAgent().isEmpty(), "Authorization agent can't be empty. Please "
+//                        + "include authorization agent url");
         if (!distributionSpecs.isEmpty()
                 && !distributionSpecs.contains("nil")) {
             metadata.setSpecification(valueFactory.createIRI(
                     distributionSpecs));
         }
+        
+        String requestUrl = null;
         if (doesParentResourceExists(metadata)) {
+            // Create data access request in myconsent
+            DatasetMetadata dMetadata = retrieveDatasetMetaData(metadata.getParentURI());
+            CatalogMetadata cMetadata = retrieveCatalogMetaData(dMetadata.getParentURI());
+            try {
+                String dsid = cMetadata.getIdentifier().getIdentifier().getLabel();
+                String requestDescription = "Test request from fdp";
+                requestUrl = myconsentService.createDataAccessRequest(dsid, myConsentStudyId, 
+                        dMetadata.getUri().toString(), requestDescription);
+                // Set request access url  
+                metadata.getAccessRights().getAuthorization().setRequestURI(valueFactory.createIRI(
+                        requestUrl));
+            } catch (MyconsentServiceException | IllegalArgumentException ex) {
+                LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());
+            }        
             storeMetadata(metadata);
         } else {
             String msg = "The dataset URI provided is not of type dcat:Dataset "
                 + "Please try with valid dataset URI";
             throw new IllegalStateException(msg);
-        }        
+        } 
+        return requestUrl;
     }
     
     @Override

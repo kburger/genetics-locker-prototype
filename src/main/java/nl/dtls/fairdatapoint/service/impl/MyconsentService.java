@@ -97,20 +97,22 @@ public class MyconsentService {
     /**
      * Create data access request token on myconsent system and return request token
      * 
-     * @param dsuid  Data record unique token (Required)
+     * @param dsid  Data source unique token (Required)
      * @param description   Data access request description
+     * @param foreignKey    Local reference of data record 
      * @param studyId Study token (Required) 
      * @return  Returns data access request token
      * 
      * @throws MyconsentServiceException    Exception is thrown when GET request is invalid 
      * @throws IllegalArgumentException Exception is thrown when response status is not 200 
      */
-    public String createDataAccessRequest(String dsuid, String studyId, String description) 
-            throws MyconsentServiceException, IllegalArgumentException {
-        String requestId = null;
+    public String createDataAccessRequest(String dsid, String studyId, String foreignKey, 
+            String description) throws MyconsentServiceException, IllegalArgumentException {
+        String requestUrl = null;
         Map<String, String> data = new HashMap<>();
         data.put("study_id", studyId);
-        data.put("dsuid", dsuid);
+        data.put("foreign_key", foreignKey);
+        data.put("dsid", dsid);
         data.put("request_body", description);
         Gson gson = new Gson(); 
         String jsonBody = gson.toJson(data); 
@@ -125,13 +127,13 @@ public class MyconsentService {
                 throw (new IllegalArgumentException("Not valid request"));
             }
             JsonObject jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
-            requestId = jsonObject.get("request_id").getAsString();
+            requestUrl = apiUrl + "request/" + jsonObject.get("request_id").getAsString();
         } catch (UnirestException ex) {
             String msg = "Error querying myconsent API. " + ex.getMessage();
             LOGGER.error(msg);
             throw (new MyconsentServiceException(msg));
         }
-        return requestId;
+        return requestUrl;
     }
     
     /**

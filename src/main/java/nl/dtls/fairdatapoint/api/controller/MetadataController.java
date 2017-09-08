@@ -558,9 +558,13 @@ public class MetadataController {
         String requestedURL = getRequesedURL(request);
         IRI uri = valueFactory.createIRI(requestedURL + "/" + trimmedId);
         metadata.setUri(uri);
-        fairMetaDataService.storeDistributionMetaData(metadata);
+        String requestUrl = fairMetaDataService.storeDistributionMetaData(metadata);
         response.addHeader(HttpHeaders.LOCATION, uri.toString());
-        return "Metadata is stored";
+        String msg = "Metadata is stored.";
+        if (requestUrl != null) {
+            msg = msg + " Myconsent request url = " + requestUrl;
+        }
+        return msg;
     }
 
     /**

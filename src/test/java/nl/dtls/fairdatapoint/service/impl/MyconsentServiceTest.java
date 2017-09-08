@@ -81,8 +81,10 @@ public class MyconsentServiceTest {
         LOGGER.info("Test : vaild createRequestURL");
         String dsuid = "1";
         String studyId = "1";
+        String foreignKey = "123";
         String description = "Test call";
-        String result = myconsentService.createDataAccessRequest(dsuid, studyId, description);
+        String result = myconsentService.createDataAccessRequest(dsuid, studyId, foreignKey, 
+                description);
         assertNotNull(result);
     }
     
