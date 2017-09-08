@@ -27,12 +27,17 @@
  */
 package nl.dtls.fairdatapoint.api.controller;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.NoSuchAlgorithmException;
 
+import javax.crypto.NoSuchPaddingException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.rdf4j.model.IRI;
@@ -82,6 +87,9 @@ import org.eclipse.rdf4j.rio.RDFWriterRegistry;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.context.request.WebRequest;
 import springfox.documentation.annotations.ApiIgnore;
+import util.proxy.Proxy;
+import util.proxy.ProxyException;
+import util.proxy.ProxyImpl;
 
 /**
  * Handle fair metadata api calls
@@ -331,6 +339,48 @@ public class MetadataController {
         return metadata;
     }
 
+   
+    //@ApiIgnore
+    @ApiOperation(value = "Dataset metadata2")
+    @RequestMapping(value = "/resource/{resourceid}", method = RequestMethod.GET)
+    @ResponseStatus(HttpStatus.OK)
+    public void getResource(@PathVariable final String resourceid, HttpServletResponse response)
+            throws FairMetadataServiceException, ResourceNotFoundException,
+            MetadataException { 
+    	
+        System.out.println("---"+resourceid);
+					
+		URL url;
+
+		try {
+			ProxyImpl proxy = new ProxyImpl();
+			url = proxy.resolveObfuscatedURL(resourceid);
+			System.out.println("test"+url);
+			
+			InputStream inputStream = proxy.get(url);
+			String contentType = proxy.getContentType();
+			
+		    IOUtils.copy(inputStream, response.getOutputStream());
+		    
+		    //response.addHeader("Content-disposition", "");
+		
+		    response.setContentType(contentType);
+		    
+		    response.flushBuffer();
+		} catch (IOException | ProxyException | NoSuchAlgorithmException | NoSuchPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        //response.addHeader("Content-disposition", "");
+        //response.setContentType();
+		
+
+    		
+    	   // return "test "+resourceid;
+    }   
+    
+		
+
     @ApiIgnore
     @RequestMapping(value = "/datarecord/{id}", method = RequestMethod.GET, produces
             = MediaType.TEXT_HTML_VALUE)
@@ -344,6 +394,7 @@ public class MetadataController {
         mav.addObject("jsonLd", MetadataUtils.getString(metadata, RDFFormat.JSONLD));
         return mav;
     }
+
 
     /**
      * Get distribution metadata

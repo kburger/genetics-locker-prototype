@@ -28,10 +28,16 @@
 package nl.dtls.fairdatapoint.service.impl;
 
 import com.google.common.base.Preconditions;
+
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import javax.crypto.NoSuchPaddingException;
 import javax.xml.datatype.DatatypeConfigurationException;
 import nl.dtl.fairmetadata4j.io.CatalogMetadataParser;
 import nl.dtl.fairmetadata4j.io.DataRecordMetadataParser;
@@ -58,6 +64,9 @@ import nl.dtls.fairdatapoint.repository.StoreManagerException;
 import nl.dtls.fairdatapoint.service.FairMetaDataService;
 import nl.dtls.fairdatapoint.service.FairMetadataServiceException;
 import nl.dtls.fairdatapoint.service.MyconsentServiceException;
+import util.proxy.Proxy;
+import util.proxy.ProxyException;
+import util.proxy.ProxyImpl;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.rdf4j.model.IRI;
@@ -66,6 +75,7 @@ import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.impl.URIImpl;
 import org.eclipse.rdf4j.model.vocabulary.DCAT;
 import org.eclipse.rdf4j.model.vocabulary.DCTERMS;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
@@ -278,7 +288,6 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
             metadata.setSpecification(valueFactory.createIRI(
                     distributionSpecs));
         }
-        
         String requestUrl = null;
         if (doesParentResourceExists(metadata)) {
             // Create data access request in myconsent
