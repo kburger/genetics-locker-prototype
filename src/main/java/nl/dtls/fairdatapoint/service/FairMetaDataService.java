@@ -132,7 +132,7 @@ public interface FairMetaDataService {
      * @throws nl.dtls.fairdatapoint.service.FairMetadataServiceException
      * @throws nl.dtl.fairmetadata4j.io.MetadataException
      */
-    String storeDistributionMetaData(DistributionMetadata distributionMetadata)
+    void storeDistributionMetaData(DistributionMetadata distributionMetadata)
             throws FairMetadataServiceException, MetadataException;
     
     /**

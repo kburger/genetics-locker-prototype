@@ -60,7 +60,9 @@ import org.springframework.web.servlet.ModelAndView;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -76,10 +78,13 @@ import nl.dtl.fairmetadata4j.model.FDPMetadata;
 import nl.dtl.fairmetadata4j.model.Metadata;
 import nl.dtl.fairmetadata4j.utils.MetadataUtils;
 import nl.dtls.fairdatapoint.api.controller.utils.LoggerUtils;
+import nl.dtls.fairdatapoint.model.Authorization;
+import nl.dtls.fairdatapoint.service.AuthorizationServiceException;
 import nl.dtls.fairdatapoint.service.FairMetaDataService;
 import nl.dtls.fairdatapoint.service.FairMetadataServiceException;
 import nl.dtls.fairdatapoint.service.MyconsentServiceException;
 import nl.dtls.fairdatapoint.service.OrcidServiceException;
+import nl.dtls.fairdatapoint.service.impl.AuthorizationService;
 import nl.dtls.fairdatapoint.service.impl.MyconsentService;
 import nl.dtls.fairdatapoint.service.impl.OrcidService;
 import org.eclipse.rdf4j.rio.RDFFormat;
@@ -112,8 +117,10 @@ public class MetadataController {
     private OrcidService orcidService;
     @Autowired
     private MyconsentService myconsentService;
+    @Autowired
+    private AuthorizationService authorizationService;
     private final ValueFactory valueFactory = SimpleValueFactory.getInstance();
-    private static Metadata metadata;
+    private static DistributionMetadata metadata;
     private static String view;
 
     /**
@@ -184,24 +191,32 @@ public class MetadataController {
             = MediaType.TEXT_HTML_VALUE)
     public ModelAndView resloveAccessRightsORCID(HttpServletRequest request,
             WebRequest webRequest) throws FairMetadataServiceException, ResourceNotFoundException,
-            MetadataException, OrcidServiceException, MyconsentServiceException {
+            MetadataException, OrcidServiceException, MyconsentServiceException,
+            AuthorizationServiceException {
         Map<String, String[]> params = webRequest.getParameterMap();
-        AccessRights accessRights = this.metadata.getAccessRights();
+        //AccessRights accessRights = this.metadata.getAccessRights();
         String code = params.get("code")[0];
         IRI agentUrl = orcidService.getOrcidUri(code);
-        boolean isVaidAgent = false;
-        boolean status = false;
-        // Check agent
-        for (Agent agent : accessRights.getAuthorization().getAuthorizedAgent()) {
-            if (agent.getUri().equals(agentUrl)) {
-                isVaidAgent = true;
-                break;
-            }
+        boolean status;
+        // Check authorization statments for given agent        
+        Authorization authorization = authorizationService.getAuthorization(agentUrl, 
+                this.metadata.getUri());
+        // Create new authorization statments  and store them in the triple store
+        if (authorization == null) {            
+            IRI requestUri = createMyconsentRequest(this.metadata);   
+            authorization = new Authorization();            
+            String authUri = this.metadata.getUri().toString() + "/authorization_of_" + 
+                    Integer.toString(agentUrl.hashCode());
+            authorization.setUri(valueFactory.createIRI(authUri));
+            authorization.setAgent(agentUrl);
+            authorization.setMetadata(this.metadata.getUri());
+            authorization.setRequest(requestUri);
+            authorizationService.storeAuthorization(authorization);
         }
         // Check data access request status   
         String rUrl = null;
-        if (accessRights.getAuthorization().getRequestURI() != null) {
-            rUrl = accessRights.getAuthorization().getRequestURI().toString();
+        if (authorization.getRequest() != null) {
+            rUrl = authorization.getRequest().toString();
         }
         // Default view is always denied access        
         ModelAndView mav = new ModelAndView("accessDenied");
@@ -211,14 +226,10 @@ public class MetadataController {
             mav.addObject("error", "Invalid data access request URL <" + rUrl + ">");
             return mav;
         }
-        if (isVaidAgent && status) {
+        if (status) {
             mav = new ModelAndView(this.view);
             mav.addObject("metadata", this.metadata);
             mav.addObject("jsonLd", MetadataUtils.getString(this.metadata, RDFFormat.JSONLD));
-        } else if (!isVaidAgent) {
-            mav.addObject("error", "Sorry. You don't have access rights to see this content");
-            Agent publisher = this.metadata.getPublisher();
-            mav.addObject("publisher", publisher);
         } else if (!status && rUrl != null) {
             mav.addObject("error", "Sorry. You request to access data is still not approved by "
                     + "the data owner");
@@ -428,33 +439,16 @@ public class MetadataController {
             produces = MediaType.TEXT_HTML_VALUE)
     public ModelAndView getHtmlDistributionMetadata(HttpServletRequest request) throws
             FairMetadataServiceException, ResourceNotFoundException, MetadataException {
-        ModelAndView mav = new ModelAndView("distribution");
         String uri = getRequesedURL(request);
         DistributionMetadata metadata = fairMetaDataService.retrieveDistributionMetaData(
                 valueFactory.createIRI(uri));
         return getModelAndView(metadata);
     }
 
-    private <T extends Metadata> ModelAndView getModelAndView(T metadata) throws MetadataException {
-        ModelAndView mav;
+    private ModelAndView getModelAndView(DistributionMetadata metadata) throws MetadataException {
         this.metadata = metadata;
-        if (metadata instanceof FDPMetadata) {
-            this.view = "repository";
-        } else if (metadata instanceof CatalogMetadata) {
-            this.view = "catalog";
-        } else if (metadata instanceof DatasetMetadata) {
-            this.view = "dataset";
-        } else if (metadata instanceof DistributionMetadata) {
-            this.view = "distribution";
-        }
-        AccessRights accessRights = metadata.getAccessRights();
-        if (accessRights != null) {
-            mav = new ModelAndView("redirect:" + orcidService.getAuthorizeUrl());
-            return mav;
-        }
-        mav = new ModelAndView(this.view);
-        mav.addObject("metadata", this.metadata);
-        mav.addObject("jsonLd", MetadataUtils.getString(metadata, RDFFormat.JSONLD));
+        this.view = "distribution";
+        ModelAndView mav = new ModelAndView("redirect:" + orcidService.getAuthorizeUrl());
         return mav;
     }
 
@@ -609,12 +603,9 @@ public class MetadataController {
         String requestedURL = getRequesedURL(request);
         IRI uri = valueFactory.createIRI(requestedURL + "/" + trimmedId);
         metadata.setUri(uri);
-        String requestUrl = fairMetaDataService.storeDistributionMetaData(metadata);
+        fairMetaDataService.storeDistributionMetaData(metadata);
         response.addHeader(HttpHeaders.LOCATION, uri.toString());
         String msg = "Metadata is stored.";
-        if (requestUrl != null) {
-            msg = msg + " Myconsent request url = " + requestUrl;
-        }
         return msg;
     }
 
@@ -721,5 +712,27 @@ public class MetadataController {
         trimmedStr = trimmedStr.trim();
         trimmedStr = trimmedStr.replace(" ", "-");
         return trimmedStr;
+    }
+    
+    private IRI createMyconsentRequest(DistributionMetadata metadata) throws
+            FairMetadataServiceException {
+        IRI requestUri = null;
+        // Create data access request in myconsent
+        DatasetMetadata dMetadata = fairMetaDataService.retrieveDatasetMetaData(
+                metadata.getParentURI());
+        CatalogMetadata cMetadata = fairMetaDataService.retrieveCatalogMetaData(
+                dMetadata.getParentURI());
+        try {
+            String dsid = cMetadata.getIdentifier().getIdentifier().getLabel();
+            String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
+            String requestDescription = "Test request from fdp. Requested time = " + timeStamp;
+            String url = myconsentService.createDataAccessRequest(dsid, "3",
+                    dMetadata.getUri().toString(), requestDescription);
+            // Set request access url  
+            requestUri = valueFactory.createIRI(url);
+        } catch (MyconsentServiceException | IllegalArgumentException ex) {
+            LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());
+        }
+        return requestUri;
     }
 }

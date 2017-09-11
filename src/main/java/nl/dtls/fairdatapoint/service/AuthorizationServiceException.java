@@ -20,11 +20,32 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package util.proxy;
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package nl.dtls.fairdatapoint.service;
 
-public class ProxyException extends Exception {
-	  public ProxyException() { super(); }
-	  public ProxyException(String message) { super(message); }
-	  public ProxyException(String message, Throwable cause) { super(message, cause); }
-	  public ProxyException(Throwable cause) { super(cause); } 
+/**
+ *
+ * @author rajaram
+ */
+public class AuthorizationServiceException extends Exception {
+
+    /**
+     * Creates a new instance of <code>AuthorizationServiceException</code> without detail message.
+     */
+    public AuthorizationServiceException() {
+    }
+
+    /**
+     * Constructs an instance of <code>AuthorizationServiceException</code> with the specified
+     * detail message.
+     *
+     * @param msg the detail message.
+     */
+    public AuthorizationServiceException(String msg) {
+        super(msg);
+    }
 }
