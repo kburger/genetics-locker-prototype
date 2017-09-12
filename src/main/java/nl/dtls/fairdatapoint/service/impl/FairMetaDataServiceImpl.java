@@ -113,7 +113,6 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
     
     @Autowired
     private MyconsentService myconsentService;
-    private String myConsentStudyId = "3";
 
     @org.springframework.beans.factory.annotation.Value("${metadataProperties.rootSpecs:nil}")
     private String fdpSpecs;
