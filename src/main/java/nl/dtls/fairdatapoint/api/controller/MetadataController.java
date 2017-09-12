@@ -89,6 +89,7 @@ import nl.dtls.fairdatapoint.service.impl.MyconsentService;
 import nl.dtls.fairdatapoint.service.impl.OrcidService;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFWriterRegistry;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.context.request.WebRequest;
 import springfox.documentation.annotations.ApiIgnore;
@@ -121,7 +122,10 @@ public class MetadataController {
     private AuthorizationService authorizationService;
     private final ValueFactory valueFactory = SimpleValueFactory.getInstance();
     private static DistributionMetadata metadata;
-    private static String view;
+    private static String view;         
+    @Autowired
+    @Qualifier("myconsentResearcherStudyId")
+    private String myconsentStudyId;  
 
     /**
      * To handle GET FDP metadata request. (Note:) The first value in the produces annotation is
@@ -727,7 +731,7 @@ public class MetadataController {
             String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
             String requestDescription = "Data access request from fdp. Requester URI : "
                     + requesterUri.toString() + " Requested time : " + timeStamp;
-            requestUri = myconsentService.createDataAccessRequest(dsid, "3",
+            requestUri = myconsentService.createDataAccessRequest(dsid, myconsentStudyId,
                     dMetadata.getUri().toString(), requestDescription);
         } catch (MyconsentServiceException | IllegalArgumentException ex) {
             LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());

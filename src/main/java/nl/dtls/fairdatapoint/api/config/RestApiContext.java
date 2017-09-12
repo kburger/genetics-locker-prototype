@@ -250,6 +250,15 @@ public class RestApiContext extends WebMvcConfigurerAdapter {
         return null;
     }
     
+    @Bean(name = "myconsentResearcherStudyId")    
+    public String myconsentResearcherStudyId(@Value("${myconsent.researcherStudyId:nil}") 
+            String id) {
+        if (!id.contentEquals("nil")) {
+            return id;           
+        }
+        return null;
+    }
+    
     @Override
     public void addResourceHandlers(final ResourceHandlerRegistry registry) {
         registry.setOrder(Integer.MIN_VALUE + 1).
