@@ -203,7 +203,7 @@ public class MetadataController {
                 this.metadata.getUri());
         // Create new authorization statments  and store them in the triple store
         if (authorization == null) {            
-            IRI requestUri = createMyconsentRequest(this.metadata);   
+            IRI requestUri = createMyconsentRequest(this.metadata, agentUrl);   
             authorization = new Authorization();            
             String authUri = this.metadata.getUri().toString() + "/authorization_of_" + 
                     Integer.toString(agentUrl.hashCode());
@@ -714,7 +714,7 @@ public class MetadataController {
         return trimmedStr;
     }
     
-    private IRI createMyconsentRequest(DistributionMetadata metadata) throws
+    private IRI createMyconsentRequest(DistributionMetadata metadata, IRI requesterUri) throws
             FairMetadataServiceException {
         IRI requestUri = null;
         // Create data access request in myconsent
@@ -725,11 +725,10 @@ public class MetadataController {
         try {
             String dsid = cMetadata.getIdentifier().getIdentifier().getLabel();
             String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
-            String requestDescription = "Test request from fdp. Requested time = " + timeStamp;
-            String url = myconsentService.createDataAccessRequest(dsid, "3",
+            String requestDescription = "Data access request from fdp. Requester URI : "
+                    + requesterUri.toString() + " Requested time : " + timeStamp;
+            requestUri = myconsentService.createDataAccessRequest(dsid, "3",
                     dMetadata.getUri().toString(), requestDescription);
-            // Set request access url  
-            requestUri = valueFactory.createIRI(url);
         } catch (MyconsentServiceException | IllegalArgumentException ex) {
             LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());
         }

@@ -36,6 +36,9 @@ import java.util.HashMap;
 import java.util.Map;
 import nl.dtls.fairdatapoint.service.MyconsentServiceException;
 import org.apache.logging.log4j.LogManager;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -59,7 +62,8 @@ public class MyconsentService {
     private String apiUrl;     
     @Autowired
     @Qualifier("myconsentResearcherToken")
-    private String researcherToken; 
+    private String researcherToken;     
+    private final ValueFactory valueFactory = SimpleValueFactory.getInstance();
     
     /**
      * Get status of data access request status
@@ -106,9 +110,9 @@ public class MyconsentService {
      * @throws MyconsentServiceException    Exception is thrown when GET request is invalid 
      * @throws IllegalArgumentException Exception is thrown when response status is not 200 
      */
-    public String createDataAccessRequest(String dsid, String studyId, String foreignKey, 
+    public IRI createDataAccessRequest(String dsid, String studyId, String foreignKey, 
             String description) throws MyconsentServiceException, IllegalArgumentException {
-        String requestUrl = null;
+        IRI requestUrl = null;
         Map<String, String> data = new HashMap<>();
         data.put("study_id", studyId);
         data.put("foreign_key", foreignKey);
@@ -116,8 +120,9 @@ public class MyconsentService {
         data.put("request_body", description);
         Gson gson = new Gson(); 
         String jsonBody = gson.toJson(data); 
+        String url = apiUrl + "request";
         try {
-            HttpResponse<String> response = Unirest.post(apiUrl + "request")
+            HttpResponse<String> response = Unirest.post(url)
                     .header("Content-Type", "application/json")
                     .header("accept", "application/json")
                     .header("Authorization", ("Bearer " + researcherToken))
@@ -127,7 +132,8 @@ public class MyconsentService {
                 throw (new IllegalArgumentException("Not valid request"));
             }
             JsonObject jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
-            requestUrl = apiUrl + "request/" + jsonObject.get("request_id").getAsString();
+            String requestId = jsonObject.get("request_id").getAsString();
+            requestUrl = valueFactory.createIRI(url + "/" + requestId);
         } catch (UnirestException ex) {
             String msg = "Error querying myconsent API. " + ex.getMessage();
             LOGGER.error(msg);
@@ -147,17 +153,18 @@ public class MyconsentService {
      * @throws MyconsentServiceException    Exception is thrown when POST request is invalid 
      * @throws IllegalArgumentException Exception is thrown when response status is not 200 
      */
-    public String createDataSource(String name, String description, String email) 
+    public IRI createDataSource(String name, String description, String email) 
             throws MyconsentServiceException, IllegalArgumentException {
-        String dsid = null;
+        IRI dsUri = null;
         Map<String, String> data = new HashMap<>();
         data.put("name", name);
         data.put("description", description);
         data.put("researcher_email", email);
         Gson gson = new Gson(); 
         String jsonBody = gson.toJson(data); 
+        String url = apiUrl + "data-source";
         try {
-            HttpResponse<String> response = Unirest.post(apiUrl + "data-source")
+            HttpResponse<String> response = Unirest.post(url)
                     .header("Content-Type", "application/json")
                     .header("accept", "application/json")
                     .header("Authorization", ("Bearer " + researcherToken))
@@ -167,13 +174,14 @@ public class MyconsentService {
                 throw (new IllegalArgumentException("Not valid request"));
             }
             JsonObject jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
-            dsid = jsonObject.get("dsid").getAsString();
+            String dsid = jsonObject.get("dsid").getAsString();
+            dsUri = valueFactory.createIRI(url + "/" + dsid);
         } catch (UnirestException ex) {
             String msg = "Error querying myconsent API. " + ex.getMessage();
             LOGGER.error(msg);
             throw (new MyconsentServiceException(msg));
         }
-        return dsid;
+        return dsUri;
     } 
     
     /**

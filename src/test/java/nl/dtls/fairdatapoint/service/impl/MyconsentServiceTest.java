@@ -30,6 +30,7 @@ package nl.dtls.fairdatapoint.service.impl;
 import nl.dtls.fairdatapoint.api.config.RestApiTestContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.rdf4j.model.IRI;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Ignore;
@@ -83,7 +84,7 @@ public class MyconsentServiceTest {
         String studyId = "1";
         String foreignKey = "123";
         String description = "Test call";
-        String result = myconsentService.createDataAccessRequest(dsuid, studyId, foreignKey, 
+        IRI result = myconsentService.createDataAccessRequest(dsuid, studyId, foreignKey, 
                 description);
         assertNotNull(result);
     }

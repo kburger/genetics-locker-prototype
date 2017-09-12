@@ -113,9 +113,6 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
     
     @Autowired
     private MyconsentService myconsentService;
-    @Autowired
-    @Qualifier("myconsentApiUrl")
-    private String apiUrl;  
     private String myConsentStudyId = "3";
 
     @org.springframework.beans.factory.annotation.Value("${metadataProperties.rootSpecs:nil}")
@@ -202,36 +199,39 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
         if (!catalogSpecs.isEmpty()
                 && !catalogSpecs.contains("nil")) {
             metadata.setSpecification(valueFactory.createIRI(catalogSpecs));
-        }         
+        }
         // Store catalog reference in myconsent 
-        String dsName = metadata.getTitle().getLabel();        
+        String dsName = metadata.getTitle().getLabel();
         String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
-        String dsDescription = "Test call to create data source. Created time = " + timeStamp;
+        String dsDescription = "Create data source from fdp. Created time = " + timeStamp;
         String dsPublisherEmail = "test@test.com";
-        if (metadata.getDescription() != null ) {            
-            dsDescription = metadata.getDescription().getLabel();            
-        } 
+        if (metadata.getDescription() != null) {
+            dsDescription = metadata.getDescription().getLabel();
+        }
         if (metadata.getPublisher() != null && metadata.getPublisher().getMbox() != null) {
-            dsPublisherEmail =  metadata.getPublisher().getMbox().toString();
+            dsPublisherEmail = metadata.getPublisher().getMbox().toString();
         }
         String dsid = null;
         try {
-            dsid = myconsentService.createDataSource(dsName, dsDescription, 
+            IRI dsUri = myconsentService.createDataSource(dsName, dsDescription,
                     dsPublisherEmail);
-            Identifier mId = new Identifier(); 
-            mId.setIdentifier(valueFactory.createLiteral(dsid, XMLSchema.STRING));
-            mId.setUri(valueFactory.createIRI(apiUrl + "data-source/" + dsid));
-            metadata.setIdentifier(mId);
+            dsid = dsUri.getLocalName();
+            if (dsUri != null) {
+                Identifier mId = new Identifier();
+                mId.setIdentifier(valueFactory.createLiteral(dsid, XMLSchema.STRING));
+                mId.setUri(dsUri);
+                metadata.setIdentifier(mId);
+            }
         } catch (MyconsentServiceException | IllegalArgumentException ex) {
             LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());
-        }        
+        }
         if (doesParentResourceExists(metadata)) {
             storeMetadata(metadata);
         } else {
             String msg = "The fdp URI provided is not of type re3:Repository "
-                + "Please try with valid fdp URI";
+                    + "Please try with valid fdp URI";
             throw new IllegalStateException(msg);
-        } 
+        }
         return dsid;
     }
 
