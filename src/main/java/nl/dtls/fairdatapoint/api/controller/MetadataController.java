@@ -93,9 +93,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.context.request.WebRequest;
 import springfox.documentation.annotations.ApiIgnore;
-import util.proxy.Proxy;
-import util.proxy.ProxyException;
-import util.proxy.ProxyImpl;
+import nl.dtls.utils.proxy.Proxy;
+import nl.dtls.utils.proxy.ProxyException;
+import nl.dtls.utils.proxy.ProxyImpl;
 
 /**
  * Handle fair metadata api calls
@@ -355,19 +355,31 @@ public class MetadataController {
     }
 
    
+  /**
+     * Get a remote proxied resource (file)
+     *
+     * @param resourceid
+     * @param response
+     * @return a proxied resource in the form of a download. The file name will be set as
+     * the original if possible and the mime type returned will be the same
+     *
+     * @throws FairMetadataServiceException
+     */
     //@ApiIgnore
-    @ApiOperation(value = "Dataset metadata2")
+    @ApiOperation(value = "Get proxied resource")
     @RequestMapping(value = "/resource/{resourceid}", method = RequestMethod.GET)
     @ResponseStatus(HttpStatus.OK)
     public void getResource(@PathVariable final String resourceid, HttpServletResponse response)
             throws FairMetadataServiceException, ResourceNotFoundException,
             MetadataException { 
-    	
-        System.out.println("---"+resourceid);
-					
+   				
 		URL url;
 
 		try {
+			
+			AccessRights accessRights = this.metadata.getAccessRights();
+			if(accessRights==null) return; //send 404
+			
 			ProxyImpl proxy = new ProxyImpl();
 			url = proxy.resolveObfuscatedURL(resourceid);
 			System.out.println("test"+url);
@@ -388,10 +400,7 @@ public class MetadataController {
 		}
         //response.addHeader("Content-disposition", "");
         //response.setContentType();
-		
-
-    		
-    	   // return "test "+resourceid;
+    	// return "test "+resourceid;
     }   
     
 		

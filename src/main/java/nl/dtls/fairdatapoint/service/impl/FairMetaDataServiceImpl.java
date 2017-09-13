@@ -47,6 +47,7 @@ import nl.dtl.fairmetadata4j.io.DatasetMetadataParser;
 import nl.dtl.fairmetadata4j.io.DistributionMetadataParser;
 import nl.dtl.fairmetadata4j.io.FDPMetadataParser;
 import nl.dtl.fairmetadata4j.io.MetadataException;
+import nl.dtl.fairmetadata4j.model.AccessRights;
 import nl.dtl.fairmetadata4j.model.Agent;
 import nl.dtl.fairmetadata4j.model.CatalogMetadata;
 import nl.dtl.fairmetadata4j.model.DataRecordMetadata;
@@ -66,9 +67,9 @@ import nl.dtls.fairdatapoint.repository.StoreManagerException;
 import nl.dtls.fairdatapoint.service.FairMetaDataService;
 import nl.dtls.fairdatapoint.service.FairMetadataServiceException;
 import nl.dtls.fairdatapoint.service.MyconsentServiceException;
-import util.proxy.Proxy;
-import util.proxy.ProxyException;
-import util.proxy.ProxyImpl;
+import nl.dtls.utils.proxy.Proxy;
+import nl.dtls.utils.proxy.ProxyException;
+import nl.dtls.utils.proxy.ProxyImpl;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.rdf4j.model.IRI;
@@ -280,13 +281,33 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
             metadata.setSpecification(valueFactory.createIRI(
                     distributionSpecs));
         }
-        if (doesParentResourceExists(metadata)) {       
-            storeMetadata(metadata);
-        } else {
-            String msg = "The dataset URI provided is not of type dcat:Dataset "
-                + "Please try with valid dataset URI";
-            throw new IllegalStateException(msg);
-        } 
+             try {
+        	
+        	AccessRights accessRights = metadata.getAccessRights();
+        	
+        	if(accessRights!=null) {    
+        		ProxyImpl proxy = new ProxyImpl();
+        		IRI downloadURL = metadata.getDownloadURL();
+  			
+        		URL url = proxy.obfuscateURL( new URL(downloadURL.stringValue()) ); 
+        		metadata.setDownloadURL(new URIImpl(url.toString()));
+        	}
+  		    
+  			
+  		} catch (UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException | MalformedURLException | ProxyException e) {
+  			// TODO Auto-generated catch block
+  			e.printStackTrace();
+  		}
+        
+                if (doesParentResourceExists(metadata)) {       
+                    storeMetadata(metadata);
+                } else {
+                    String msg = "The dataset URI provided is not of type dcat:Dataset "
+                        + "Please try with valid dataset URI";
+                    throw new IllegalStateException(msg);
+                } 
+        
+        
     }
     
     @Override

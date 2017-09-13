@@ -20,7 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package util.proxy;
+package nl.dtls.utils.proxy;
 // This example is from _Java Examples in a Nutshell_. (http://www.oreilly.com)
 // Copyright (c) 1997 by David Flanagan
 // This example is provided WITHOUT ANY WARRANTY either expressed or implied.

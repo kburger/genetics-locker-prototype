@@ -20,14 +20,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package util.proxy;
+package nl.dtls.utils.proxy;
 
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URL;
-
-public interface Proxy {
-	URL obfuscateURL(URL remoteUrl) throws ProxyException;
-	URL resolveObfuscatedURL(String remoteURL) throws ProxyException;
-	InputStream get(URL url) throws ProxyException;;
+public class ProxyException extends Exception {
+	  public ProxyException() { super(); }
+	  public ProxyException(String message) { super(message); }
+	  public ProxyException(String message, Throwable cause) { super(message, cause); }
+	  public ProxyException(Throwable cause) { super(cause); } 
 }
