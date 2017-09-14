@@ -234,13 +234,13 @@ public class MetadataController {
         if (status) {
             
                   
-            if(authorization!=null){
+           // if(authorization!=null){
                     ProxyImpl proxy = new ProxyImpl();
                     IRI downloadURL = metadata.getDownloadURL();
 
                     URL url = proxy.obfuscateURL( new URL(downloadURL.stringValue()) ); 
                     metadata.setDownloadURL(new URIImpl(url.toString()));
-            }
+            //}
 
             
             mav = new ModelAndView(this.view);
@@ -406,7 +406,7 @@ public class MetadataController {
 		    response.setContentType(contentType);
 		    
 		    response.flushBuffer();
-		} catch (IOException | ProxyException | NoSuchAlgorithmException | NoSuchPaddingException e) {
+		} catch (IOException | ProxyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
