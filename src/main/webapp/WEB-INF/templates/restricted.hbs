@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+        <!-- Optional theme -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+        <!-- Login -->
+        <link rel="stylesheet" href="fdp/resources/css/login.css" crossorigin="anonymous">
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous">
+        </script>
+        <title>Restricted content</title>
+    </head>
+    <body>    
+        <blockquote class="blockquote">   
+		<p class="text-warning" style="max-width:750px;">
+			<span class="glyphicon glyphicon-lock" aria-hidden="true"></span>
+            		<span class="sr-only"></span>
+               		<b> Restricted : </b> 
+                            This metadata content is protected. 
+                        {{#if orcidOauthUrl}}
+                            Please click this <a target="_blank" href="{{orcidOauthUrl}}">link</a> to authenticate via ORCID 
+                        {{/if}}    
+        	</p>
+	</blockquote>
+        <br> 
+    </body>
+</html>

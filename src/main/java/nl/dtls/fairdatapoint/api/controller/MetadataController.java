@@ -460,8 +460,9 @@ public class MetadataController {
 
     private ModelAndView getModelAndView(DistributionMetadata metadata) throws MetadataException {
         this.metadata = metadata;
-        this.view = "distribution";
-        ModelAndView mav = new ModelAndView("redirect:" + orcidService.getAuthorizeUrl());
+        this.view = "distribution";        
+        ModelAndView mav = new ModelAndView("restricted");
+        mav.addObject("orcidOauthUrl",  orcidService.getAuthorizeUrl());
         return mav;
     }
 
