@@ -96,6 +96,7 @@ import springfox.documentation.annotations.ApiIgnore;
 import nl.dtls.utils.proxy.Proxy;
 import nl.dtls.utils.proxy.ProxyException;
 import nl.dtls.utils.proxy.ProxyImpl;
+import org.eclipse.rdf4j.model.impl.URIImpl;
 
 /**
  * Handle fair metadata api calls
@@ -196,7 +197,7 @@ public class MetadataController {
     public ModelAndView resloveAccessRightsORCID(HttpServletRequest request,
             WebRequest webRequest) throws FairMetadataServiceException, ResourceNotFoundException,
             MetadataException, OrcidServiceException, MyconsentServiceException,
-            AuthorizationServiceException {
+            AuthorizationServiceException, ProxyException, MalformedURLException {
         Map<String, String[]> params = webRequest.getParameterMap();
         //AccessRights accessRights = this.metadata.getAccessRights();
         String code = params.get("code")[0];
@@ -231,6 +232,17 @@ public class MetadataController {
             return mav;
         }
         if (status) {
+            
+                  
+            if(authorization!=null){
+                    ProxyImpl proxy = new ProxyImpl();
+                    IRI downloadURL = metadata.getDownloadURL();
+
+                    URL url = proxy.obfuscateURL( new URL(downloadURL.stringValue()) ); 
+                    metadata.setDownloadURL(new URIImpl(url.toString()));
+            }
+
+            
             mav = new ModelAndView(this.view);
             mav.addObject("metadata", this.metadata);
             mav.addObject("jsonLd", MetadataUtils.getString(this.metadata, RDFFormat.JSONLD));

@@ -49,6 +49,7 @@ import nl.dtl.fairmetadata4j.io.FDPMetadataParser;
 import nl.dtl.fairmetadata4j.io.MetadataException;
 import nl.dtl.fairmetadata4j.model.AccessRights;
 import nl.dtl.fairmetadata4j.model.Agent;
+import nl.dtl.fairmetadata4j.model.Authorization;
 import nl.dtl.fairmetadata4j.model.CatalogMetadata;
 import nl.dtl.fairmetadata4j.model.DataRecordMetadata;
 import nl.dtl.fairmetadata4j.model.DatasetMetadata;
@@ -114,6 +115,9 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
     
     @Autowired
     private MyconsentService myconsentService;
+    
+    @Autowired
+    private AuthorizationService authorizationService;
 
     @org.springframework.beans.factory.annotation.Value("${metadataProperties.rootSpecs:nil}")
     private String fdpSpecs;
@@ -281,23 +285,28 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
             metadata.setSpecification(valueFactory.createIRI(
                     distributionSpecs));
         }
-             try {
+            // try {
         	
-        	AccessRights accessRights = metadata.getAccessRights();
-        	
-        	if(accessRights!=null) {    
+                /*Authorization authorization = authorizationService.getAuthorization(agentUrl, 
+                metadata.getUri());
+                
+                //if(accessRights!=null) {        
+                if(authorization!=null){
+        	    
         		ProxyImpl proxy = new ProxyImpl();
         		IRI downloadURL = metadata.getDownloadURL();
   			
         		URL url = proxy.obfuscateURL( new URL(downloadURL.stringValue()) ); 
         		metadata.setDownloadURL(new URIImpl(url.toString()));
-        	}
+                }
+        	//}*/
+  		    
   		    
   			
-  		} catch (UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException | MalformedURLException | ProxyException e) {
+  	//	} catch (UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException | MalformedURLException | ProxyException e) {
   			// TODO Auto-generated catch block
-  			e.printStackTrace();
-  		}
+  	//		e.printStackTrace();
+  	//	}
         
                 if (doesParentResourceExists(metadata)) {       
                     storeMetadata(metadata);

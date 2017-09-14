@@ -32,6 +32,8 @@ import java.net.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -64,13 +66,18 @@ public class ProxyImpl implements Proxy{
 	}
 	
 	//TODO create exception
-	public ProxyImpl() throws UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchPaddingException {
+	public ProxyImpl() throws ProxyException {
 		
-		byte[] key = fixSecret("=ThiSiSAn~Amzing.!", 16);
-		this.secretKey = new SecretKeySpec(key, "AES");
-		System.out.println("secret key");
-		System.out.println(this.secretKey);
-		this.cipher = Cipher.getInstance("AES");
+            try {
+                byte[] key = fixSecret("=ThiSiSAn~Amzing.!", 16);
+                this.secretKey = new SecretKeySpec(key, "AES");
+                System.out.println("secret key");
+                System.out.println(this.secretKey);
+                this.cipher = Cipher.getInstance("AES");
+            } catch (UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException ex ) {
+                Logger.getLogger(ProxyImpl.class.getName()).log(Level.SEVERE, null, ex);
+                throw new ProxyException(ex.getMessage(), ex.getCause());
+            }
 		
 	}
 	
