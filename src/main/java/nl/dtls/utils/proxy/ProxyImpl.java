@@ -56,7 +56,7 @@ public class ProxyImpl implements Proxy{
 	
 	public static void main(String[] argv) throws MalformedURLException, ProxyException, UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchPaddingException {
 		ProxyImpl p = new ProxyImpl();
-		URL url = p.obfuscateURL(new URL("http://www.sapo.pt/"));
+		URL url = p.obfuscateURL("http://www.test1.com/", new URL("http://www.test2.com/"));
 		
 		System.out.println(url.toString());
 		
@@ -110,13 +110,13 @@ public class ProxyImpl implements Proxy{
 	}
 	
 	
-	public URL obfuscateURL(URL remoteUrl) throws ProxyException {
+	public URL obfuscateURL(String baseURL, URL remoteUrl) throws ProxyException {
 		String obfuscatedURL;
 		URL url = null;
-		String baseurl = "http://127.0.0.1:8080/fdp";
+		// baseurl = "http://127.0.0.1:8080/fdp";
 		try {
 			obfuscatedURL = encryptAndEncode(remoteUrl.toString());
-			url = new URL(baseurl+"/resource/"+obfuscatedURL);
+			url = new URL(baseURL+"/resource/"+obfuscatedURL);
 		} catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException | MalformedURLException | UnsupportedEncodingException e) {
 			ProxyException pe = new ProxyException("The url can't be obfuscated", e.getCause());
 			throw pe;
@@ -131,10 +131,11 @@ public class ProxyImpl implements Proxy{
 	
 		try {
 			clearURL = decryptAndDecode(remoteURL);
+                        System.out.println("clear"+clearURL);
 			url = new URL(clearURL);
 		} catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException | MalformedURLException | UnsupportedEncodingException e) {
 			e.printStackTrace();
-			ProxyException pe = new ProxyException("The url can't be desobfuscated", e.getCause());
+			ProxyException pe = new ProxyException("The url can't be unobfuscated", e.getCause());
 			throw pe;
 		}
 		

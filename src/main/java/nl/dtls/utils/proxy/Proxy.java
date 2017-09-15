@@ -27,7 +27,7 @@ import java.io.OutputStream;
 import java.net.URL;
 
 public interface Proxy {
-	URL obfuscateURL(URL remoteUrl) throws ProxyException;
+	URL obfuscateURL(String baseURL, URL remoteUrl) throws ProxyException;
 	URL resolveObfuscatedURL(String remoteURL) throws ProxyException;
 	InputStream get(URL url) throws ProxyException;;
 }

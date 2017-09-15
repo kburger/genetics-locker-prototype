@@ -190,6 +190,7 @@ public class MetadataController {
                 MetadataUtils.SCHEMA_DOT_ORG_MODEL));
         return mav;
     }
+   
 
     @ApiIgnore
     @RequestMapping(value = "/accessControl", method = RequestMethod.GET, produces
@@ -237,9 +238,14 @@ public class MetadataController {
            // if(authorization!=null){
                     ProxyImpl proxy = new ProxyImpl();
                     IRI downloadURL = metadata.getDownloadURL();
+                    if(downloadURL!=null){
+                        
+                       // System.out.println("teste2 "+request.getContextPath());
+                        String baseUrl = String.format("%s://%s:%d/fairdatapoint/fdp/",request.getScheme(),  request.getServerName(), request.getServerPort());
 
-                    URL url = proxy.obfuscateURL( new URL(downloadURL.stringValue()) ); 
-                    metadata.setDownloadURL(new URIImpl(url.toString()));
+                        URL url = proxy.obfuscateURL(baseUrl, new URL(downloadURL.stringValue() )); 
+                        metadata.setDownloadURL(new URIImpl(url.toString()));
+                    }
             //}
 
             
@@ -253,7 +259,7 @@ public class MetadataController {
         }
         return mav;
     }
-
+    
     /**
      * Get catalog metadata
      *
@@ -384,13 +390,14 @@ public class MetadataController {
     public void getResource(@PathVariable final String resourceid, HttpServletResponse response)
             throws FairMetadataServiceException, ResourceNotFoundException,
             MetadataException { 
-   				
+                
+            
 		URL url;
 
 		try {
 			
-			AccessRights accessRights = this.metadata.getAccessRights();
-			if(accessRights==null) return; //send 404
+			//AccessRights accessRights = this.metadata.getAccessRights();
+			//      if(accessRights==null) return; //send 404
 			
 			ProxyImpl proxy = new ProxyImpl();
 			url = proxy.resolveObfuscatedURL(resourceid);
@@ -399,13 +406,12 @@ public class MetadataController {
 			InputStream inputStream = proxy.get(url);
 			String contentType = proxy.getContentType();
 			
-		    IOUtils.copy(inputStream, response.getOutputStream());
+                        response.setContentType(contentType);
+                        //response.addHeader("Content-disposition", "");
+                        
+                        IOUtils.copy(inputStream, response.getOutputStream());
 		    
-		    //response.addHeader("Content-disposition", "");
-		
-		    response.setContentType(contentType);
-		    
-		    response.flushBuffer();
+                        response.flushBuffer();
 		} catch (IOException | ProxyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
