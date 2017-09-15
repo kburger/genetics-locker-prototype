@@ -195,7 +195,7 @@ public class MetadataController {
 
     @ApiIgnore
     @RequestMapping(value = "/accessControl", method = RequestMethod.GET, produces
-            = MediaType.TEXT_HTML_VALUE) 
+            = MediaType.TEXT_HTML_VALUE)    
     public ModelAndView resloveAccessRightsORCID(HttpServletRequest request,
             WebRequest webRequest) throws FairMetadataServiceException, ResourceNotFoundException,
             MetadataException, OrcidServiceException, MyconsentServiceException,
@@ -407,9 +407,15 @@ public class MetadataController {
 			
 			InputStream inputStream = proxy.get(url);
 			String contentType = proxy.getContentType();
+                        String contentDisposition = proxy.getContentDisposition();
 			
                         response.setContentType(contentType);
-                        //response.addHeader("Content-disposition", "");
+                        
+                        if(contentDisposition!=null)
+                            response.addHeader("Content-Disposition", "attachment; filename=\""+contentDisposition+"\"");
+                        
+                        System.out.println("content disposition");
+                        System.out.println(contentDisposition);
                         
                         IOUtils.copy(inputStream, response.getOutputStream());
 		    

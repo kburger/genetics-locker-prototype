@@ -32,6 +32,9 @@ import java.net.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -178,6 +181,26 @@ public class ProxyImpl implements Proxy{
 		//if(this.uc!=null)
 		return this.uc.getContentType();
 	}
+        //switch to resource name
+        public String getContentDisposition(){
+            
+            String raw = this.uc.getHeaderField("Content-Disposition");
+            // raw = "attachment; filename=abc.jpg"
+            if(raw != null && raw.indexOf("=") != -1) {
+                String fileName = raw.split("=")[1]; //getting value after '='
+                return fileName;
+            } else {
+                try {
+                    URI uri = this.uc.getURL().toURI();
+                    String path = uri.getPath();
+                    String filename = path.substring(path.lastIndexOf('/') + 1);
+                    return filename;
+                } catch (URISyntaxException ex) {
+                    Logger.getLogger(ProxyImpl.class.getName()).log(Level.SEVERE, null, ex);
+                    return null;
+                }
+            }
+        }
 	
 	
 }
