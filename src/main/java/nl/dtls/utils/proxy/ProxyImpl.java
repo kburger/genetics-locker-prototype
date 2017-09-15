@@ -40,6 +40,7 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
+import org.apache.commons.io.IOUtils;
 
 /**
  * This class uses the Server class to provide a multi-threaded server 
@@ -56,13 +57,23 @@ public class ProxyImpl implements Proxy{
 	
 	public static void main(String[] argv) throws MalformedURLException, ProxyException, UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchPaddingException {
 		ProxyImpl p = new ProxyImpl();
-		URL url = p.obfuscateURL("http://www.test1.com/", new URL("http://www.test2.com/"));
+		URL url = p.obfuscateURL("http://127.0.0.1:8084/fairdatapoint/fdp/", new URL("http://data.wikipathways.org/20170810/gpml/wikipathways-20170810-gpml-Equus_caballus.zip"));
 		
 		System.out.println(url.toString());
 		
-		URL durl = p.resolveObfuscatedURL("Ct9L5jx5D3kxgvepgkdKTel3pU2EOTlVPe9Y9ne4W24%3D");
+		URL durl = p.resolveObfuscatedURL("dXZDEc5JR2iudgxsZerWeexbGmwLTfYwTAyT2VWFWJp%2FWX7ty7K6jqTA1M0DC6cwY8zwMyDoRR5%2FCmUOittp2qEF%2BM1QxuRyScua7QpuKyUjNhuOV%2FSasO9%2FMpXlb05X");
 		
 		System.out.println(durl.toString());
+                
+                String theString = "not init"; 
+
+                try {
+                    theString = IOUtils.toString(p.get(durl), "UTF-8");
+                } catch (IOException ex) {
+                    Logger.getLogger(ProxyImpl.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                //System.out.println(theString);
+              
 	}
 	
 	//TODO create exception
@@ -116,7 +127,7 @@ public class ProxyImpl implements Proxy{
 		// baseurl = "http://127.0.0.1:8080/fdp";
 		try {
 			obfuscatedURL = encryptAndEncode(remoteUrl.toString());
-			url = new URL(baseURL+"/resource/"+obfuscatedURL);
+			url = new URL(baseURL+ "/resource/"+URLEncoder.encode(obfuscatedURL, "UTF-8"));
 		} catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException | MalformedURLException | UnsupportedEncodingException e) {
 			ProxyException pe = new ProxyException("The url can't be obfuscated", e.getCause());
 			throw pe;

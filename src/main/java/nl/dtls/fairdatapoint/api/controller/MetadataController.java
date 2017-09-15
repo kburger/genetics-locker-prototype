@@ -60,6 +60,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -194,7 +195,7 @@ public class MetadataController {
 
     @ApiIgnore
     @RequestMapping(value = "/accessControl", method = RequestMethod.GET, produces
-            = MediaType.TEXT_HTML_VALUE)
+            = MediaType.TEXT_HTML_VALUE) 
     public ModelAndView resloveAccessRightsORCID(HttpServletRequest request,
             WebRequest webRequest) throws FairMetadataServiceException, ResourceNotFoundException,
             MetadataException, OrcidServiceException, MyconsentServiceException,
@@ -243,7 +244,8 @@ public class MetadataController {
                        // System.out.println("teste2 "+request.getContextPath());
                         String baseUrl = String.format("%s://%s:%d/fairdatapoint/fdp/",request.getScheme(),  request.getServerName(), request.getServerPort());
 
-                        URL url = proxy.obfuscateURL(baseUrl, new URL(downloadURL.stringValue() )); 
+                        URL url = proxy.obfuscateURL(baseUrl, new URL( downloadURL.stringValue() )); 
+                 
                         metadata.setDownloadURL(new URIImpl(url.toString()));
                     }
             //}
@@ -398,7 +400,7 @@ public class MetadataController {
 			
 			//AccessRights accessRights = this.metadata.getAccessRights();
 			//      if(accessRights==null) return; //send 404
-			
+			System.out.println(resourceid); System.out.flush();
 			ProxyImpl proxy = new ProxyImpl();
 			url = proxy.resolveObfuscatedURL(resourceid);
 			System.out.println("test"+url);
