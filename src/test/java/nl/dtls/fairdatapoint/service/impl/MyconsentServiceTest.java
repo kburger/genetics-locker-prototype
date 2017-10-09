@@ -84,8 +84,9 @@ public class MyconsentServiceTest {
         String studyId = "1";
         String foreignKey = "123";
         String description = "Test call";
+        String reqTemplateId = "1";
         IRI result = myconsentService.createDataAccessRequest(dsuid, studyId, foreignKey, 
-                description);
+                description, reqTemplateId);
         assertNotNull(result);
     }
     

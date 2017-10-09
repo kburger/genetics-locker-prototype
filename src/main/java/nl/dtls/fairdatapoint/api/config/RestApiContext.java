@@ -259,6 +259,15 @@ public class RestApiContext extends WebMvcConfigurerAdapter {
         return null;
     }
     
+    @Bean(name = "myconsentRequestTemplateId")    
+    public String myconsentRequestTemplateId(@Value("${myconsent.requestTemplateId:nil}") 
+            String id) {
+         if (!id.contentEquals("nil")) {
+            return id;           
+        }
+        return null;
+    } 
+    
     @Override
     public void addResourceHandlers(final ResourceHandlerRegistry registry) {
         registry.setOrder(Integer.MIN_VALUE + 1).

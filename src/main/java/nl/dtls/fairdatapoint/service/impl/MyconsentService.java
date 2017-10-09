@@ -111,13 +111,14 @@ public class MyconsentService {
      * @throws IllegalArgumentException Exception is thrown when response status is not 200 
      */
     public IRI createDataAccessRequest(String dsid, String studyId, String foreignKey, 
-            String description) throws MyconsentServiceException, IllegalArgumentException {
+            String description, String reqTemplateId) throws MyconsentServiceException, IllegalArgumentException {
         IRI requestUrl = null;
         Map<String, String> data = new HashMap<>();
         data.put("study_id", studyId);
-        data.put("foreign_key", foreignKey);
-        data.put("dsid", dsid);
+        data.put("record_id", foreignKey);
+        data.put("data_source_id", dsid);
         data.put("request_body", description);
+        data.put("request_template_id", reqTemplateId);
         Gson gson = new Gson(); 
         String jsonBody = gson.toJson(data); 
         String url = apiUrl + "request";
@@ -174,7 +175,7 @@ public class MyconsentService {
                 throw (new IllegalArgumentException("Not valid request"));
             }
             JsonObject jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
-            String dsid = jsonObject.get("dsid").getAsString();
+            String dsid = jsonObject.get("data").getAsJsonObject().get("id").getAsString();
             dsUri = valueFactory.createIRI(url + "/" + dsid);
         } catch (UnirestException ex) {
             String msg = "Error querying myconsent API. " + ex.getMessage();
@@ -199,7 +200,7 @@ public class MyconsentService {
             throws MyconsentServiceException, IllegalArgumentException {
         String token = null;
         Map<String, String> data = new HashMap<>();
-        data.put("foreign_key", foreignKey);
+        data.put("record_id", foreignKey);
         Gson gson = new Gson(); 
         String jsonBody = gson.toJson(data); 
         try {

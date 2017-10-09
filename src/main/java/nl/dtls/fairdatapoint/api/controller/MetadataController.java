@@ -128,6 +128,10 @@ public class MetadataController {
     @Autowired
     @Qualifier("myconsentResearcherStudyId")
     private String myconsentStudyId;  
+    @Autowired
+    @Qualifier("myconsentRequestTemplateId")
+    private String myconsentReqTemplateId; 
+    
 
     /**
      * To handle GET FDP metadata request. (Note:) The first value in the produces annotation is
@@ -768,7 +772,7 @@ public class MetadataController {
             String requestDescription = "Data access request from fdp. Requester URI : "
                     + requesterUri.toString() + " Requested time : " + timeStamp;
             requestUri = myconsentService.createDataAccessRequest(dsid, myconsentStudyId,
-                    dMetadata.getUri().toString(), requestDescription);
+                    dMetadata.getUri().toString(), requestDescription, myconsentReqTemplateId);
         } catch (MyconsentServiceException | IllegalArgumentException ex) {
             LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());
         }
