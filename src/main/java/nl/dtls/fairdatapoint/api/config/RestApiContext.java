@@ -170,6 +170,104 @@ public class RestApiContext extends WebMvcConfigurerAdapter {
             StoreManagerException {
         return new StoreManagerImpl();
     }
+    
+    @Bean(name = "orcidTokenUrl")    
+    public String orcidTokenUrl(@Value("${orcid.tokenUrl:nil}") 
+            String url) {
+        String orcidTokenUrl = null;
+        if (!url.contentEquals("nil")) {
+            orcidTokenUrl = url;           
+        }
+        return orcidTokenUrl;
+    }
+    
+    
+    @Bean(name = "orcidAuthorizeUrl")    
+    public String orcidAuthorizeUrl(@Value("${orcid.authorizeUrl:nil}") 
+            String url) {
+        String authorizeUrl = null;
+        if (!url.contentEquals("nil")) {
+            authorizeUrl = url;           
+        }
+        return authorizeUrl;
+    }
+    
+   
+    @Bean(name = "orcidClientId")    
+    public String orcidClientId(@Value("${orcid.clientId:nil}") 
+            String id) {
+        String clientId = null;
+        if (!id.contentEquals("nil")) {
+            clientId = id;           
+        }
+        return clientId;
+    }    
+    
+    @Bean(name = "orcidClientSecret")    
+    public String orcidClientSecret(@Value("${orcid.clientSecret:nil}") 
+            String secret) {
+        String clientSecret = null;
+        if (!secret.contentEquals("nil")) {
+            clientSecret = secret;           
+        }
+        return clientSecret;
+    }
+    
+    @Bean(name = "orcidGrantType")    
+    public String orcidGrantType(@Value("${orcid.grantType:nil}") 
+            String type) {
+        String grantType = null;
+        if (!type.contentEquals("nil")) {
+            grantType = type;           
+        }
+        return grantType;
+    }
+    
+    @Bean(name = "orcidRedirectUrl")    
+    public String orcidRedirectUrl(@Value("${orcid.redirectUrl:nil}") 
+            String url) {
+        if (!url.contentEquals("nil")) {
+            return url;           
+        }
+        return null;
+    }
+    
+    @Bean(name = "myconsentApiUrl")    
+    public String myconsentApiUrl(@Value("${myconsent.apiUrl:nil}") 
+            String url) {
+        if (!url.contentEquals("nil")) {
+            return url;         
+        }
+        return null;
+    }
+    
+    @Bean(name = "myconsentResearcherToken")    
+    public String myconsentResearcherToken(@Value("${myconsent.researcherToken:nil}") 
+            String token) {
+        if (!token.contentEquals("nil")) {
+            return token;           
+        }
+        return null;
+    }
+    
+    @Bean(name = "myconsentResearcherStudyId")    
+    public String myconsentResearcherStudyId(@Value("${myconsent.researcherStudyId:nil}") 
+            String id) {
+        if (!id.contentEquals("nil")) {
+            return id;           
+        }
+        return null;
+    }
+    
+    @Bean(name = "myconsentRequestTemplateId")    
+    public String myconsentRequestTemplateId(@Value("${myconsent.requestTemplateId:nil}") 
+            String id) {
+         if (!id.contentEquals("nil")) {
+            return id;           
+        }
+        return null;
+    } 
+    
     @Override
     public void addResourceHandlers(final ResourceHandlerRegistry registry) {
         registry.setOrder(Integer.MIN_VALUE + 1).

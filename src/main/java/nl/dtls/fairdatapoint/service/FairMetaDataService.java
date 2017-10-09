@@ -103,7 +103,7 @@ public interface FairMetaDataService {
      * @throws FairMetadataServiceException 
      * @throws nl.dtl.fairmetadata4j.io.MetadataException 
      */
-    void storeCatalogMetaData(CatalogMetadata catalogMetadata) 
+    String storeCatalogMetaData(CatalogMetadata catalogMetadata) 
             throws FairMetadataServiceException, MetadataException;
     /**
      * Store dataset metadata
@@ -112,7 +112,7 @@ public interface FairMetaDataService {
      * @throws FairMetadataServiceException 
      * @throws nl.dtl.fairmetadata4j.io.MetadataException 
      */
-    void storeDatasetMetaData(DatasetMetadata datasetMetadata) 
+    String storeDatasetMetaData(DatasetMetadata datasetMetadata) 
             throws FairMetadataServiceException, MetadataException;
     
     /**

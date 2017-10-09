@@ -60,28 +60,44 @@ import org.springframework.web.servlet.ModelAndView;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import nl.dtl.fairmetadata4j.io.MetadataException;
 import nl.dtl.fairmetadata4j.io.MetadataParserException;
+import nl.dtl.fairmetadata4j.model.AccessRights;
 import nl.dtl.fairmetadata4j.model.Agent;
 import nl.dtl.fairmetadata4j.model.CatalogMetadata;
 import nl.dtl.fairmetadata4j.model.DataRecordMetadata;
 import nl.dtl.fairmetadata4j.model.DatasetMetadata;
 import nl.dtl.fairmetadata4j.model.DistributionMetadata;
 import nl.dtl.fairmetadata4j.model.FDPMetadata;
+import nl.dtl.fairmetadata4j.model.Metadata;
 import nl.dtl.fairmetadata4j.utils.MetadataUtils;
 import nl.dtls.fairdatapoint.api.controller.utils.LoggerUtils;
+import nl.dtls.fairdatapoint.model.Authorization;
+import nl.dtls.fairdatapoint.service.AuthorizationServiceException;
 import nl.dtls.fairdatapoint.service.FairMetaDataService;
 import nl.dtls.fairdatapoint.service.FairMetadataServiceException;
+import nl.dtls.fairdatapoint.service.MyconsentServiceException;
+import nl.dtls.fairdatapoint.service.OrcidServiceException;
+import nl.dtls.fairdatapoint.service.impl.AuthorizationService;
+import nl.dtls.fairdatapoint.service.impl.MyconsentService;
+import nl.dtls.fairdatapoint.service.impl.OrcidService;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFWriterRegistry;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
+import org.springframework.web.context.request.WebRequest;
 import springfox.documentation.annotations.ApiIgnore;
-import util.proxy.Proxy;
-import util.proxy.ProxyException;
-import util.proxy.ProxyImpl;
+import nl.dtls.utils.proxy.Proxy;
+import nl.dtls.utils.proxy.ProxyException;
+import nl.dtls.utils.proxy.ProxyImpl;
+import org.eclipse.rdf4j.model.impl.URIImpl;
 
 /**
  * Handle fair metadata api calls
@@ -100,30 +116,41 @@ public class MetadataController {
             = LogManager.getLogger(MetadataController.class);
     @Autowired
     private FairMetaDataService fairMetaDataService;
+    @Autowired
+    private OrcidService orcidService;
+    @Autowired
+    private MyconsentService myconsentService;
+    @Autowired
+    private AuthorizationService authorizationService;
     private final ValueFactory valueFactory = SimpleValueFactory.getInstance();
+    private static DistributionMetadata metadata;
+    private static String view;         
+    @Autowired
+    @Qualifier("myconsentResearcherStudyId")
+    private String myconsentStudyId;  
+    @Autowired
+    @Qualifier("myconsentRequestTemplateId")
+    private String myconsentReqTemplateId; 
+    
 
     /**
-     * To handle GET FDP metadata request. (Note:) The first value in the
-     * produces annotation is used as a fallback value, for the request with the
-     * accept header value (* / *), manually setting the contentType of the
-     * response is not working.
+     * To handle GET FDP metadata request. (Note:) The first value in the produces annotation is
+     * used as a fallback value, for the request with the accept header value (* / *), manually
+     * setting the contentType of the response is not working.
      *
      * @param request Http request
      * @param response Http response
-     * @return Metadata about the FDP in one of the acceptable formats (RDF
-     * Turtle, JSON-LD, RDF XML and RDF N3)
+     * @return Metadata about the FDP in one of the acceptable formats (RDF Turtle, JSON-LD, RDF XML
+     * and RDF N3)
      * @throws nl.dtls.fairdatapoint.service.FairMetadataServiceException
      * @throws nl.dtl.fairmetadata4j.io.MetadataException
      */
     @ApiOperation(value = "FDP metadata")
-    @RequestMapping(method = RequestMethod.GET,
-            produces = {"text/turtle",
-                "application/ld+json", "application/rdf+xml", "text/n3"}
-    )
+    @RequestMapping(method = RequestMethod.GET, produces = {"text/turtle", "application/ld+json",
+        "application/rdf+xml", "text/n3"})
     @ResponseStatus(HttpStatus.OK)
-    public FDPMetadata getFDPMetaData(final HttpServletRequest request,
-            HttpServletResponse response) throws FairMetadataServiceException,
-            ResourceNotFoundException,
+    public FDPMetadata getFDPMetaData(final HttpServletRequest request, HttpServletResponse 
+            response) throws FairMetadataServiceException, ResourceNotFoundException,
             MetadataException {
         LOGGER.info("Request to get FDP metadata");
         LOGGER.info("GET : " + request.getRequestURL());
@@ -131,8 +158,7 @@ public class MetadataController {
         if (!isFDPMetaDataAvailable(uri)) {
             storeDefaultFDPMetadata(uri);
         }
-        FDPMetadata metadata = fairMetaDataService.retrieveFDPMetaData(
-                valueFactory.createIRI(uri));
+        FDPMetadata metadata = fairMetaDataService.retrieveFDPMetaData(valueFactory.createIRI(uri));
         LoggerUtils.logRequest(LOGGER, request, response);
         return metadata;
     }
@@ -140,27 +166,22 @@ public class MetadataController {
     private boolean isFDPMetaDataAvailable(String uri) {
         FDPMetadata metadata;
         try {
-            metadata = fairMetaDataService.retrieveFDPMetaData(
-                    valueFactory.createIRI(uri));
+            metadata = fairMetaDataService.retrieveFDPMetaData(valueFactory.createIRI(uri));
             if (metadata.getUri() == null) {
                 return false;
             }
         } catch (ResourceNotFoundException ex) {
             return false;
-        }catch (FairMetadataServiceException ex) {
-            LOGGER.error("Error retrieving FDP metadata. Msg:" + 
-                    ex.getMessage());
-
-        } 
+        } catch (FairMetadataServiceException ex) {
+            LOGGER.error("Error retrieving FDP metadata. Msg:" + ex.getMessage());
+        }
         return true;
     }
 
     @ApiIgnore
-    @RequestMapping(method = RequestMethod.GET,
-            produces = MediaType.TEXT_HTML_VALUE)
+    @RequestMapping(method = RequestMethod.GET, produces = MediaType.TEXT_HTML_VALUE)
     public ModelAndView getHtmlFdpMetadata(HttpServletRequest request) throws
-            FairMetadataServiceException, ResourceNotFoundException,
-            MetadataException {
+            FairMetadataServiceException, ResourceNotFoundException, MetadataException {
         ModelAndView mav = new ModelAndView("repository");
         LOGGER.info("Request to get FDP metadata");
         LOGGER.info("GET : " + request.getRequestURL());
@@ -168,58 +189,123 @@ public class MetadataController {
         if (!isFDPMetaDataAvailable(uri)) {
             storeDefaultFDPMetadata(uri);
         }
-        FDPMetadata metadata = fairMetaDataService.retrieveFDPMetaData(
-                valueFactory.createIRI(uri));
+        FDPMetadata metadata = fairMetaDataService.retrieveFDPMetaData(valueFactory.createIRI(uri));
         mav.addObject("metadata", metadata);
-        mav.addObject("jsonLd", MetadataUtils.getString(metadata,
-                RDFFormat.JSONLD, MetadataUtils.SCHEMA_DOT_ORG_MODEL));
+        mav.addObject("jsonLd", MetadataUtils.getString(metadata, RDFFormat.JSONLD,
+                MetadataUtils.SCHEMA_DOT_ORG_MODEL));
         return mav;
     }
+   
 
+    @ApiIgnore
+    @RequestMapping(value = "/accessControl", method = RequestMethod.GET, produces
+            = MediaType.TEXT_HTML_VALUE)    
+    public ModelAndView resloveAccessRightsORCID(HttpServletRequest request,
+            WebRequest webRequest) throws FairMetadataServiceException, ResourceNotFoundException,
+            MetadataException, OrcidServiceException, MyconsentServiceException,
+            AuthorizationServiceException, ProxyException, MalformedURLException {
+        Map<String, String[]> params = webRequest.getParameterMap();
+        //AccessRights accessRights = this.metadata.getAccessRights();
+        String code = params.get("code")[0];
+        IRI agentUrl = orcidService.getOrcidUri(code);
+        boolean status;
+        // Check authorization statments for given agent        
+        Authorization authorization = authorizationService.getAuthorization(agentUrl, 
+                this.metadata.getUri());
+        // Create new authorization statments  and store them in the triple store
+        if (authorization == null) {            
+            IRI requestUri = createMyconsentRequest(this.metadata, agentUrl);   
+            authorization = new Authorization();            
+            String authUri = this.metadata.getUri().toString() + "/authorization_of_" + 
+                    Integer.toString(agentUrl.hashCode());
+            authorization.setUri(valueFactory.createIRI(authUri));
+            authorization.setAgent(agentUrl);
+            authorization.setMetadata(this.metadata.getUri());
+            authorization.setRequest(requestUri);
+            authorizationService.storeAuthorization(authorization);
+        }
+        // Check data access request status   
+        String rUrl = null;
+        if (authorization.getRequest() != null) {
+            rUrl = authorization.getRequest().toString();
+        }
+        // Default view is always denied access        
+        ModelAndView mav = new ModelAndView("accessDenied");
+        try {
+            status = myconsentService.getRequestStatus(rUrl);
+        } catch (IllegalArgumentException ex) {
+            mav.addObject("error", "Invalid data access request URL <" + rUrl + ">");
+            return mav;
+        }
+        if (status) {
+            
+                  
+           // if(authorization!=null){
+                    ProxyImpl proxy = new ProxyImpl();
+                    IRI downloadURL = metadata.getDownloadURL();
+                    if(downloadURL!=null){
+                        
+                       // System.out.println("teste2 "+request.getContextPath());
+                        String baseUrl = String.format("%s://%s:%d/fairdatapoint/fdp/",request.getScheme(),  request.getServerName(), request.getServerPort());
+
+                        URL url = proxy.obfuscateURL(baseUrl, new URL( downloadURL.stringValue() )); 
+                 
+                        metadata.setDownloadURL(new URIImpl(url.toString()));
+                    }
+            //}
+
+            
+            mav = new ModelAndView(this.view);
+            mav.addObject("metadata", this.metadata);
+            mav.addObject("jsonLd", MetadataUtils.getString(this.metadata, RDFFormat.JSONLD));
+        } else if (!status && rUrl != null) {
+            mav.addObject("error", "Sorry. You request to access data is still not approved by "
+                    + "the data owner");
+            mav.addObject("requestUrl", rUrl.replaceAll("api/", ""));
+        }
+        return mav;
+    }
+    
     /**
      * Get catalog metadata
      *
      * @param id
      * @param request
      * @param response
-     * @return Metadata about the catalog in one of the acceptable formats (RDF
-     * Turtle, JSON-LD, RDF XML and RDF N3)
+     * @return Metadata about the catalog in one of the acceptable formats (RDF Turtle, JSON-LD, RDF
+     * XML and RDF N3)
      *
      * @throws IllegalStateException
      * @throws FairMetadataServiceException
      */
     @ApiOperation(value = "Catalog metadata")
-    @RequestMapping(value = "/catalog/{id}", method = RequestMethod.GET,
-            produces = {"text/turtle",
-                "application/ld+json", "application/rdf+xml", "text/n3"}
-    )
+    @RequestMapping(value = "/catalog/{id}", method = RequestMethod.GET, produces = {"text/turtle",
+        "application/ld+json", "application/rdf+xml", "text/n3"})
     @ResponseStatus(HttpStatus.OK)
     public CatalogMetadata getCatalogMetaData(
-            @PathVariable final String id, HttpServletRequest request,
-            HttpServletResponse response) throws FairMetadataServiceException,
-            ResourceNotFoundException {
+            @PathVariable final String id, HttpServletRequest request, HttpServletResponse response)
+            throws FairMetadataServiceException, ResourceNotFoundException {
         LOGGER.info("Request to get CATALOG metadata with ID ", id);
         LOGGER.info("GET : " + request.getRequestURL());
         String uri = getRequesedURL(request);
-        CatalogMetadata metadata = fairMetaDataService.
-                retrieveCatalogMetaData(valueFactory.createIRI(uri));
+        CatalogMetadata metadata = fairMetaDataService.retrieveCatalogMetaData(valueFactory.
+                createIRI(uri));
         LoggerUtils.logRequest(LOGGER, request, response);
         return metadata;
     }
 
     @ApiIgnore
-    @RequestMapping(value = "/catalog/{id}", method = RequestMethod.GET,
-            produces = MediaType.TEXT_HTML_VALUE)
-    public ModelAndView getHtmlCatalogMetadata(HttpServletRequest request)
-            throws FairMetadataServiceException, ResourceNotFoundException,
-            MetadataException {
+    @RequestMapping(value = "/catalog/{id}", method = RequestMethod.GET, produces
+            = MediaType.TEXT_HTML_VALUE)
+    public ModelAndView getHtmlCatalogMetadata(HttpServletRequest request) throws
+            FairMetadataServiceException, ResourceNotFoundException, MetadataException {
         ModelAndView mav = new ModelAndView("catalog");
         String uri = getRequesedURL(request);
-        CatalogMetadata metadata = fairMetaDataService.
-                retrieveCatalogMetaData(valueFactory.createIRI(uri));
+        CatalogMetadata metadata = fairMetaDataService.retrieveCatalogMetaData(valueFactory.
+                createIRI(uri));
         mav.addObject("metadata", metadata);
-        mav.addObject("jsonLd", MetadataUtils.getString(metadata,
-                RDFFormat.JSONLD, MetadataUtils.SCHEMA_DOT_ORG_MODEL));
+        mav.addObject("jsonLd", MetadataUtils.getString(metadata, RDFFormat.JSONLD,
+                MetadataUtils.SCHEMA_DOT_ORG_MODEL));
         return mav;
     }
 
@@ -229,136 +315,140 @@ public class MetadataController {
      * @param id
      * @param request
      * @param response
-     * @return Metadata about the dataset in one of the acceptable formats (RDF
-     * Turtle, JSON-LD, RDF XML and RDF N3)
+     * @return Metadata about the dataset in one of the acceptable formats (RDF Turtle, JSON-LD, RDF
+     * XML and RDF N3)
      *
      * @throws FairMetadataServiceException
      */
     @ApiOperation(value = "Dataset metadata")
-    @RequestMapping(value = "/dataset/{id}",
-            method = RequestMethod.GET,
-            produces = {"text/turtle",
-                "application/ld+json", "application/rdf+xml", "text/n3"}
-    )
+    @RequestMapping(value = "/dataset/{id}", method = RequestMethod.GET, produces = {"text/turtle",
+        "application/ld+json", "application/rdf+xml", "text/n3"})
     @ResponseStatus(HttpStatus.OK)
-    public DatasetMetadata getDatasetMetaData(
-            @PathVariable final String id, HttpServletRequest request,
-            HttpServletResponse response) throws FairMetadataServiceException,
-            ResourceNotFoundException {
+    public DatasetMetadata getDatasetMetaData(@PathVariable final String id,
+            HttpServletRequest request, HttpServletResponse response) throws
+            FairMetadataServiceException, ResourceNotFoundException {
         LOGGER.info("Request to get DATASET metadata with ID ", id);
         LOGGER.info("GET : " + request.getRequestURL());
         String uri = getRequesedURL(request);
-        DatasetMetadata metadata = fairMetaDataService.
-                retrieveDatasetMetaData(valueFactory.createIRI(uri));
+        DatasetMetadata metadata = fairMetaDataService.retrieveDatasetMetaData(valueFactory.
+                createIRI(uri));
         LoggerUtils.logRequest(LOGGER, request, response);
         return metadata;
     }
 
     @ApiIgnore
-    @RequestMapping(value = "/dataset/{id}", method = RequestMethod.GET,
-            produces = MediaType.TEXT_HTML_VALUE)
-    public ModelAndView getHtmlDatsetMetadata(HttpServletRequest request)
-            throws FairMetadataServiceException, ResourceNotFoundException,
-            MetadataException {
+    @RequestMapping(value = "/dataset/{id}", method = RequestMethod.GET, produces
+            = MediaType.TEXT_HTML_VALUE)
+    public ModelAndView getHtmlDatsetMetadata(HttpServletRequest request) throws
+            FairMetadataServiceException, ResourceNotFoundException, MetadataException {
         ModelAndView mav = new ModelAndView("dataset");
         String uri = getRequesedURL(request);
-        DatasetMetadata metadata = fairMetaDataService.
-                retrieveDatasetMetaData(valueFactory.createIRI(uri));
+        DatasetMetadata metadata = fairMetaDataService.retrieveDatasetMetaData(valueFactory.
+                createIRI(uri));
         mav.addObject("metadata", metadata);
-        mav.addObject("jsonLd", MetadataUtils.getString(metadata,
-                RDFFormat.JSONLD, MetadataUtils.SCHEMA_DOT_ORG_MODEL));
+        mav.addObject("jsonLd", MetadataUtils.getString(metadata, RDFFormat.JSONLD,
+                MetadataUtils.SCHEMA_DOT_ORG_MODEL));
         return mav;
     }
-    
-    
+
     /**
      * Get datarecord metadata
      *
      * @param id
      * @param request
      * @param response
-     * @return Metadata about the dataset in one of the acceptable formats (RDF
-     * Turtle, JSON-LD, RDF XML and RDF N3)
+     * @return Metadata about the dataset in one of the acceptable formats (RDF Turtle, JSON-LD, RDF
+     * XML and RDF N3)
      *
      * @throws FairMetadataServiceException
      */
     @ApiOperation(value = "Dataset metadata")
-    @RequestMapping(value = "/datarecord/{id}",
-            method = RequestMethod.GET,
-            produces = {"text/turtle",
-                "application/ld+json", "application/rdf+xml", "text/n3"}
-    )
+    @RequestMapping(value = "/datarecord/{id}", method = RequestMethod.GET, produces
+            = {"text/turtle", "application/ld+json", "application/rdf+xml", "text/n3"})
     @ResponseStatus(HttpStatus.OK)
-    public DataRecordMetadata getDataRecordMetaData(
-            @PathVariable final String id, HttpServletRequest request,
-            HttpServletResponse response) throws FairMetadataServiceException,
-            ResourceNotFoundException {	
-    		
+    public DataRecordMetadata getDataRecordMetaData(@PathVariable final String id,
+            HttpServletRequest request, HttpServletResponse response) throws
+            FairMetadataServiceException, ResourceNotFoundException {
         LOGGER.info("Request to get DATARECORD metadata with ID ", id);
-	LOGGER.info("GET : " + request.getRequestURL());
-	String uri = getRequesedURL(request);
-	DataRecordMetadata metadata = fairMetaDataService.
-                retrieveDataRecordMetadata(valueFactory.createIRI(uri));
-        LoggerUtils.logRequest(LOGGER, request, response); 
+        LOGGER.info("GET : " + request.getRequestURL());
+        String uri = getRequesedURL(request);
+        DataRecordMetadata metadata = fairMetaDataService.retrieveDataRecordMetadata(valueFactory.
+                createIRI(uri));
+        LoggerUtils.logRequest(LOGGER, request, response);
         return metadata;
     }
 
-    @ApiIgnore
-    @RequestMapping(value = "/datarecord/{id}", method = RequestMethod.GET,
-            produces = MediaType.TEXT_HTML_VALUE)
-    public ModelAndView getHtmlDataRecordMetadata(HttpServletRequest request)
-            throws FairMetadataServiceException, ResourceNotFoundException,
-            MetadataException {
-        ModelAndView mav = new ModelAndView("dataset");	        
-        String uri = getRequesedURL(request);	        
-        DataRecordMetadata metadata = fairMetaDataService.	                
-                retrieveDataRecordMetadata(valueFactory.createIRI(uri));	        
-        mav.addObject("metadata", metadata);	        
-        mav.addObject("jsonLd", MetadataUtils.getString(metadata, 
-                RDFFormat.JSONLD));	        
-        return mav;
-    }   
-  
+   
+  /**
+     * Get a remote proxied resource (file)
+     *
+     * @param resourceid
+     * @param response
+     * @return a proxied resource in the form of a download. The file name will be set as
+     * the original if possible and the mime type returned will be the same
+     *
+     * @throws FairMetadataServiceException
+     */
     //@ApiIgnore
-    @ApiOperation(value = "Dataset metadata2")
+    @ApiOperation(value = "Get proxied resource")
     @RequestMapping(value = "/resource/{resourceid}", method = RequestMethod.GET)
     @ResponseStatus(HttpStatus.OK)
     public void getResource(@PathVariable final String resourceid, HttpServletResponse response)
             throws FairMetadataServiceException, ResourceNotFoundException,
             MetadataException { 
-    	
-        System.out.println("---"+resourceid);
-					
+                
+            
 		URL url;
 
 		try {
+			
+			//AccessRights accessRights = this.metadata.getAccessRights();
+			//      if(accessRights==null) return; //send 404
+			System.out.println(resourceid); System.out.flush();
 			ProxyImpl proxy = new ProxyImpl();
 			url = proxy.resolveObfuscatedURL(resourceid);
 			System.out.println("test"+url);
 			
 			InputStream inputStream = proxy.get(url);
 			String contentType = proxy.getContentType();
+                        String contentDisposition = proxy.getContentDisposition();
 			
-		    IOUtils.copy(inputStream, response.getOutputStream());
+                        response.setContentType(contentType);
+                        
+                        if(contentDisposition!=null)
+                            response.addHeader("Content-Disposition", "attachment; filename=\""+contentDisposition+"\"");
+                        
+                        System.out.println("content disposition");
+                        System.out.println(contentDisposition);
+                        
+                        IOUtils.copy(inputStream, response.getOutputStream());
 		    
-		    //response.addHeader("Content-disposition", "");
-		
-		    response.setContentType(contentType);
-		    
-		    response.flushBuffer();
-		} catch (IOException | ProxyException | NoSuchAlgorithmException | NoSuchPaddingException e) {
+                        response.flushBuffer();
+		} catch (IOException | ProxyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
         //response.addHeader("Content-disposition", "");
         //response.setContentType();
-		
-
-    		
-    	   // return "test "+resourceid;
+    	// return "test "+resourceid;
     }   
     
 		
+
+    @ApiIgnore
+    @RequestMapping(value = "/datarecord/{id}", method = RequestMethod.GET, produces
+            = MediaType.TEXT_HTML_VALUE)
+    public ModelAndView getHtmlDataRecordMetadata(HttpServletRequest request) throws
+            FairMetadataServiceException, ResourceNotFoundException, MetadataException {
+        ModelAndView mav = new ModelAndView("dataset");
+        String uri = getRequesedURL(request);
+        DataRecordMetadata metadata = fairMetaDataService.retrieveDataRecordMetadata(valueFactory.
+                createIRI(uri));
+        mav.addObject("metadata", metadata);
+        mav.addObject("jsonLd", MetadataUtils.getString(metadata, RDFFormat.JSONLD));
+        return mav;
+    }
+
 
     /**
      * Get distribution metadata
@@ -366,28 +456,23 @@ public class MetadataController {
      * @param id
      * @param request
      * @param response
-     * @return Metadata about the dataset distribution in one of the acceptable
-     * formats (RDF Turtle, JSON-LD, RDF XML and RDF N3)
+     * @return Metadata about the dataset distribution in one of the acceptable formats (RDF Turtle,
+     * JSON-LD, RDF XML and RDF N3)
      *
      * @throws FairMetadataServiceException
      */
     @ApiOperation(value = "Dataset distribution metadata")
-    @RequestMapping(value = "/distribution/{id}",
-            produces = {"text/turtle",
-                "application/ld+json", "application/rdf+xml", "text/n3"},
-            method = RequestMethod.GET)
+    @RequestMapping(value = "/distribution/{id}", produces = {"text/turtle", "application/ld+json",
+        "application/rdf+xml", "text/n3"}, method = RequestMethod.GET)
     @ResponseStatus(HttpStatus.OK)
-    public DistributionMetadata getDistribution(
-            @PathVariable final String id,
-            HttpServletRequest request,
-            HttpServletResponse response) throws FairMetadataServiceException,
-            ResourceNotFoundException {
-        LOGGER.info("Request to get dataset's distribution wih ID ",
-                id);
+    public DistributionMetadata getDistribution(@PathVariable final String id,
+            HttpServletRequest request, HttpServletResponse response) throws
+            FairMetadataServiceException, ResourceNotFoundException {
+        LOGGER.info("Request to get dataset's distribution wih ID ", id);
         LOGGER.info("GET : " + request.getRequestURL());
         String uri = getRequesedURL(request);
-        DistributionMetadata metadata = fairMetaDataService.
-                retrieveDistributionMetaData(valueFactory.createIRI(uri));
+        DistributionMetadata metadata = fairMetaDataService.retrieveDistributionMetaData(
+                valueFactory.createIRI(uri));
         LoggerUtils.logRequest(LOGGER, request, response);
         return metadata;
     }
@@ -395,16 +480,19 @@ public class MetadataController {
     @ApiIgnore
     @RequestMapping(value = "/distribution/{id}", method = RequestMethod.GET,
             produces = MediaType.TEXT_HTML_VALUE)
-    public ModelAndView getHtmlDistributionMetadata(HttpServletRequest request)
-            throws FairMetadataServiceException, ResourceNotFoundException,
-            MetadataException {
-        ModelAndView mav = new ModelAndView("distribution");
+    public ModelAndView getHtmlDistributionMetadata(HttpServletRequest request) throws
+            FairMetadataServiceException, ResourceNotFoundException, MetadataException {
         String uri = getRequesedURL(request);
-        DistributionMetadata metadata = fairMetaDataService.
-                retrieveDistributionMetaData(valueFactory.createIRI(uri));
-        mav.addObject("metadata", metadata);
-        mav.addObject("jsonLd", MetadataUtils.getString(metadata,
-                RDFFormat.JSONLD, MetadataUtils.SCHEMA_DOT_ORG_MODEL));
+        DistributionMetadata metadata = fairMetaDataService.retrieveDistributionMetaData(
+                valueFactory.createIRI(uri));
+        return getModelAndView(metadata);
+    }
+
+    private ModelAndView getModelAndView(DistributionMetadata metadata) throws MetadataException {
+        this.metadata = metadata;
+        this.view = "distribution";        
+        ModelAndView mav = new ModelAndView("restricted");
+        mav.addObject("orcidOauthUrl",  orcidService.getAuthorizeUrl());
         return mav;
     }
 
@@ -421,16 +509,14 @@ public class MetadataController {
     @ApiOperation(value = "Update fdp metadata")
     @RequestMapping(method = RequestMethod.PATCH, consumes = {"text/turtle"})
     @ResponseStatus(HttpStatus.OK)
-    public String updateFDPMetaData(final HttpServletRequest request,
-            HttpServletResponse response,
-            @RequestBody(required = true) FDPMetadata metadata) throws
-            FairMetadataServiceException, MetadataException {
+    public String updateFDPMetaData(final HttpServletRequest request, HttpServletResponse response,
+            @RequestBody(required = true) FDPMetadata metadata) throws FairMetadataServiceException,
+            MetadataException {
         String uri = getRequesedURL(request);
         if (!isFDPMetaDataAvailable(uri)) {
             storeDefaultFDPMetadata(uri);
         }
-        fairMetaDataService.updateFDPMetaData(valueFactory.createIRI(uri),
-                metadata);
+        fairMetaDataService.updateFDPMetaData(valueFactory.createIRI(uri), metadata);
         return "Metadata is updated";
     }
 
@@ -446,16 +532,13 @@ public class MetadataController {
      * @throws nl.dtls.fairdatapoint.service.FairMetadataServiceException
      */
     @ApiOperation(value = "POST catalog metadata")
-    @RequestMapping(value = "/catalog",
-            method = RequestMethod.POST, consumes = {"text/turtle"})
+    @RequestMapping(value = "/catalog", method = RequestMethod.POST, consumes = {"text/turtle"})
     @ResponseStatus(HttpStatus.CREATED)
     public String storeCatalogMetaData(final HttpServletRequest request,
-            HttpServletResponse response,
-            @RequestBody(required = true) CatalogMetadata metadata,
-            @RequestParam("id") String id) throws
-            FairMetadataServiceException, MetadataException {
+            HttpServletResponse response, @RequestBody(required = true) CatalogMetadata metadata,
+            @RequestParam("id") String id) throws FairMetadataServiceException, MetadataException {
         String trimmedId = trimmer(id);
-        LOGGER.info("Request to store catalog metatdata with ID ", trimmedId);         
+        LOGGER.info("Request to store catalog metatdata with ID ", trimmedId);
         String requestedURL = getRequesedURL(request);
         String fURI = requestedURL.replace("/catalog", "");
         if (!isFDPMetaDataAvailable(fURI)) {
@@ -468,9 +551,13 @@ public class MetadataController {
         metadata.setParentURI(fdpURI);
         // Ignore children links
         metadata.setDatasets(new ArrayList());
-        fairMetaDataService.storeCatalogMetaData(metadata);
+        String dsid = fairMetaDataService.storeCatalogMetaData(metadata);
         response.addHeader(HttpHeaders.LOCATION, uri.toString());
-        return "Metadata is stored";
+        String msg = "Metadata is stored.";
+        if (dsid != null) {
+            msg = msg + " Myconsent dsid = " + dsid;
+        }
+        return msg;
     }
 
     /**
@@ -486,14 +573,11 @@ public class MetadataController {
      * @throws nl.dtls.fairdatapoint.service.FairMetadataServiceException
      */
     @ApiOperation(value = "POST dataset metadata")
-    @RequestMapping(value = "/dataset", method = RequestMethod.POST,
-            consumes = {"text/turtle"})
+    @RequestMapping(value = "/dataset", method = RequestMethod.POST, consumes = {"text/turtle"})
     @ResponseStatus(HttpStatus.CREATED)
     public String storeDatasetMetaData(final HttpServletRequest request,
-            HttpServletResponse response,
-            @RequestBody(required = true) DatasetMetadata metadata,
-            @RequestParam("id") String id)
-            throws FairMetadataServiceException, MetadataException {
+            HttpServletResponse response, @RequestBody(required = true) DatasetMetadata metadata,
+            @RequestParam("id") String id) throws FairMetadataServiceException, MetadataException {
         String trimmedId = trimmer(id);
         LOGGER.info("Request to store dataset metatdata with ID ", trimmedId);
         String requestedURL = getRequesedURL(request);
@@ -501,11 +585,15 @@ public class MetadataController {
         metadata.setUri(uri);
         // Ignore children links 
         metadata.setDistributions(new ArrayList());
-        fairMetaDataService.storeDatasetMetaData(metadata);
+        String token = fairMetaDataService.storeDatasetMetaData(metadata);
         response.addHeader(HttpHeaders.LOCATION, uri.toString());
-        return "Metadata is stored";
+        String msg = "Metadata is stored.";
+        if (token != null) {
+            msg = msg + " Myconsent token = " + token;
+        }
+        return msg;
     }
-    
+
     /**
      * To handle POST datarecord metadata request.
      *
@@ -519,17 +607,13 @@ public class MetadataController {
      * @throws nl.dtls.fairdatapoint.service.FairMetadataServiceException
      */
     @ApiOperation(value = "POST datarecord metadata")
-    @RequestMapping(value = "/datarecord",
-            method = RequestMethod.POST, consumes = {"text/turtle"})
+    @RequestMapping(value = "/datarecord", method = RequestMethod.POST, consumes = {"text/turtle"})
     @ResponseStatus(HttpStatus.CREATED)
     public String storeDataRecord(final HttpServletRequest request,
-            HttpServletResponse response,
-            @RequestBody(required = true) DataRecordMetadata metadata,
-            @RequestParam("id") String id)
-            throws FairMetadataServiceException, MetadataException {
+            HttpServletResponse response, @RequestBody(required = true) DataRecordMetadata metadata,
+            @RequestParam("id") String id) throws FairMetadataServiceException, MetadataException {
         String trimmedId = trimmer(id);
-        LOGGER.info("Request to store datarecord metatdata with ID ",
-                trimmedId);
+        LOGGER.info("Request to store datarecord metatdata with ID ", trimmedId);
         String requestedURL = getRequesedURL(request);
         IRI uri = valueFactory.createIRI(requestedURL + "/" + trimmedId);
         metadata.setUri(uri);
@@ -551,23 +635,22 @@ public class MetadataController {
      * @throws nl.dtls.fairdatapoint.service.FairMetadataServiceException
      */
     @ApiOperation(value = "POST distribution metadata")
-    @RequestMapping(value = "/distribution",
-            method = RequestMethod.POST, consumes = {"text/turtle"})
+    @RequestMapping(value = "/distribution", method = RequestMethod.POST,
+            consumes = {"text/turtle"})
     @ResponseStatus(HttpStatus.CREATED)
     public String storeDistribution(final HttpServletRequest request,
-            HttpServletResponse response,
-            @RequestBody(required = true) DistributionMetadata metadata,
-            @RequestParam("id") String id)
-            throws FairMetadataServiceException, MetadataException {
+            HttpServletResponse response, @RequestBody(required = true) 
+                    DistributionMetadata metadata, @RequestParam("id") String id) throws
+            FairMetadataServiceException, MetadataException {
         String trimmedId = trimmer(id);
-        LOGGER.info("Request to store distribution metatdata with ID ",
-                trimmedId);
+        LOGGER.info("Request to store distribution metatdata with ID ", trimmedId);
         String requestedURL = getRequesedURL(request);
         IRI uri = valueFactory.createIRI(requestedURL + "/" + trimmedId);
         metadata.setUri(uri);
         fairMetaDataService.storeDistributionMetaData(metadata);
         response.addHeader(HttpHeaders.LOCATION, uri.toString());
-        return "Metadata is stored";
+        String msg = "Metadata is stored.";
+        return msg;
     }
 
     /**
@@ -581,47 +664,44 @@ public class MetadataController {
         LOGGER.info("Original requesed url " + url);
         if (url.endsWith("/")) {
             url = url.substring(0, url.length() - 1);
-        }      
-        List<String> rdfExt =  RDFWriterRegistry.getInstance()
-                .getKeys().stream()
-                    .map(RDFFormat::getDefaultFileExtension)
-                    .collect(Collectors.toList());
-        
+        }
+        List<String> rdfExt = RDFWriterRegistry.getInstance().getKeys().stream()
+                .map(RDFFormat::getDefaultFileExtension).collect(Collectors.toList());
         for (String ext : rdfExt) {
             String extension = "." + ext;
-            if(url.contains(extension)) {
+            if (url.contains(extension)) {
                 LOGGER.info("Found RDF extension in url : " + ext);
                 url = url.replace(extension, "");
                 break;
-            }            
+            }
         }
         try {
-            URL requestedURL = new URL(url);            
+            URL requestedURL = new URL(url);
             String host = request.getHeader("x-forwarded-host");
             String proto = request.getHeader("x-forwarded-proto");
             String port = request.getHeader("x-forwarded-port");
-            if(host != null && !host.isEmpty()){                
+            if (host != null && !host.isEmpty()) {
                 url = url.replace(requestedURL.getHost(), host);
             }
-            if(proto != null && !proto.isEmpty()){
+            if (proto != null && !proto.isEmpty()) {
                 url = url.replace(requestedURL.getProtocol(), proto);
-            }            
-            if(port != null && requestedURL.getPort() != -1){                
+            }
+            if (port != null && requestedURL.getPort() != -1) {
                 String val = ":" + String.valueOf(requestedURL.getPort());
                 LOGGER.info("x-forwarded-port " + port);
-                switch (port){ 
-                    case "443":                    
-                        url = url.replace(val, "");                    
+                switch (port) {
+                    case "443":
+                        url = url.replace(val, "");
                         break;
                     case "80":
                         url = url.replace(val, "");
                         break;
                     default:
-                        break;            
+                        break;
                 }
             }
-        } catch (MalformedURLException ex) {             
-            LOGGER.error("Error creating url  ", ex.getMessage());             
+        } catch (MalformedURLException ex) {
+            LOGGER.error("Error creating url  ", ex.getMessage());
             return null;
         }
         LOGGER.info("Modified requesed url " + url);
@@ -634,41 +714,35 @@ public class MetadataController {
      * @param request HttpServletRequest
      * @throws MetadataParserException
      */
-    private void storeDefaultFDPMetadata(String fdpUrl)
-            throws MetadataParserException {
+    private void storeDefaultFDPMetadata(String fdpUrl) throws MetadataParserException {
         LOGGER.info("Creating generic FDP metadata");
         try {
             String host = new URL(fdpUrl).getAuthority();
             FDPMetadata metadata = new FDPMetadata();
             metadata.setUri(valueFactory.createIRI(fdpUrl));
-            metadata.setTitle(valueFactory.createLiteral("FDP of " + host,
-                    XMLSchema.STRING));
-            metadata.setDescription(valueFactory.createLiteral(
-                    "FDP of " + host, XMLSchema.STRING));
+            metadata.setTitle(valueFactory.createLiteral("FDP of " + host, XMLSchema.STRING));
+            metadata.setDescription(valueFactory.createLiteral("FDP of " + host, XMLSchema.STRING));
             metadata.setLanguage(valueFactory.createIRI(
                     "http://id.loc.gov/vocabulary/iso639-1/en"));
             metadata.setLicense(valueFactory.createIRI(
                     "http://rdflicense.appspot.com/rdflicense/cc-by-nc-nd3.0"));
             metadata.setVersion(valueFactory.createLiteral(
                     "1.0", XMLSchema.FLOAT));
-            metadata.setSwaggerDoc(valueFactory.createIRI(
-                    fdpUrl + "/swagger-ui.html"));
+            metadata.setSwaggerDoc(valueFactory.createIRI(fdpUrl + "/swagger-ui.html"));
             metadata.setInstitutionCountry(valueFactory.createIRI(
-                    "http://lexvo.org/id/iso3166/NL"));   
+                    "http://lexvo.org/id/iso3166/NL"));
             Agent publisher = new Agent();
             publisher.setUri(valueFactory.createIRI("http://dtls.nl"));
             publisher.setType(FOAF.ORGANIZATION);
-            publisher.setName(valueFactory.createLiteral("DTLS",
-                    XMLSchema.STRING));
+            publisher.setName(valueFactory.createLiteral("DTLS", XMLSchema.STRING));
             metadata.setPublisher(publisher);
             metadata.setInstitution(publisher);
             fairMetaDataService.storeFDPMetaData(metadata);
         } catch (MalformedURLException | MetadataException
                 | FairMetadataServiceException ex) {
-            throw new MetadataParserException(
-                    "Error creating generic FDP meatdata " + ex.getMessage());
+            throw new MetadataParserException("Error creating generic FDP meatdata "
+                    + ex.getMessage());
         }
-
     }
 
     /**
@@ -682,5 +756,26 @@ public class MetadataController {
         trimmedStr = trimmedStr.trim();
         trimmedStr = trimmedStr.replace(" ", "-");
         return trimmedStr;
+    }
+    
+    private IRI createMyconsentRequest(DistributionMetadata metadata, IRI requesterUri) throws
+            FairMetadataServiceException {
+        IRI requestUri = null;
+        // Create data access request in myconsent
+        DatasetMetadata dMetadata = fairMetaDataService.retrieveDatasetMetaData(
+                metadata.getParentURI());
+        CatalogMetadata cMetadata = fairMetaDataService.retrieveCatalogMetaData(
+                dMetadata.getParentURI());
+        try {
+            String dsid = cMetadata.getIdentifier().getIdentifier().getLabel();
+            String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
+            String requestDescription = "Data access request from fdp. Requester URI : "
+                    + requesterUri.toString() + " Requested time : " + timeStamp;
+            requestUri = myconsentService.createDataAccessRequest(dsid, myconsentStudyId,
+                    dMetadata.getUri().toString(), requestDescription, myconsentReqTemplateId);
+        } catch (MyconsentServiceException | IllegalArgumentException ex) {
+            LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());
+        }
+        return requestUri;
     }
 }

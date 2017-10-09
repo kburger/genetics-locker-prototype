@@ -33,7 +33,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -45,7 +47,9 @@ import nl.dtl.fairmetadata4j.io.DatasetMetadataParser;
 import nl.dtl.fairmetadata4j.io.DistributionMetadataParser;
 import nl.dtl.fairmetadata4j.io.FDPMetadataParser;
 import nl.dtl.fairmetadata4j.io.MetadataException;
+import nl.dtl.fairmetadata4j.model.AccessRights;
 import nl.dtl.fairmetadata4j.model.Agent;
+import nl.dtl.fairmetadata4j.model.Authorization;
 import nl.dtl.fairmetadata4j.model.CatalogMetadata;
 import nl.dtl.fairmetadata4j.model.DataRecordMetadata;
 import nl.dtl.fairmetadata4j.model.DatasetMetadata;
@@ -63,13 +67,14 @@ import nl.dtls.fairdatapoint.repository.StoreManager;
 import nl.dtls.fairdatapoint.repository.StoreManagerException;
 import nl.dtls.fairdatapoint.service.FairMetaDataService;
 import nl.dtls.fairdatapoint.service.FairMetadataServiceException;
-import util.proxy.Proxy;
-import util.proxy.ProxyException;
-import util.proxy.ProxyImpl;
-
+import nl.dtls.fairdatapoint.service.MyconsentServiceException;
+import nl.dtls.utils.proxy.Proxy;
+import nl.dtls.utils.proxy.ProxyException;
+import nl.dtls.utils.proxy.ProxyImpl;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
@@ -108,6 +113,11 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
     @Qualifier("license")
     private IRI license;
     
+    @Autowired
+    private MyconsentService myconsentService;
+    
+    @Autowired
+    private AuthorizationService authorizationService;
 
     @org.springframework.beans.factory.annotation.Value("${metadataProperties.rootSpecs:nil}")
     private String fdpSpecs;
@@ -182,7 +192,7 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
     }
 
     @Override
-    public void storeCatalogMetaData(@Nonnull CatalogMetadata metadata)
+    public String storeCatalogMetaData(@Nonnull CatalogMetadata metadata)
             throws FairMetadataServiceException, MetadataException {
         Preconditions.checkState(metadata.getParentURI() != null,
                 "No fdp URI is provied. Include dcterms:isPartOf statement "
@@ -194,17 +204,43 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
                 && !catalogSpecs.contains("nil")) {
             metadata.setSpecification(valueFactory.createIRI(catalogSpecs));
         }
+        // Store catalog reference in myconsent 
+        String dsName = metadata.getTitle().getLabel();
+        String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
+        String dsDescription = "Create data source from fdp. Created time = " + timeStamp;
+        String dsPublisherEmail = "test@test.com";
+        if (metadata.getDescription() != null) {
+            dsDescription = metadata.getDescription().getLabel();
+        }
+        if (metadata.getPublisher() != null && metadata.getPublisher().getMbox() != null) {
+            dsPublisherEmail = metadata.getPublisher().getMbox().toString();
+        }
+        String dsid = null;
+        try {
+            IRI dsUri = myconsentService.createDataSource(dsName, dsDescription,
+                    dsPublisherEmail);
+            dsid = dsUri.getLocalName();
+            if (dsUri != null) {
+                Identifier mId = new Identifier();
+                mId.setIdentifier(valueFactory.createLiteral(dsid, XMLSchema.STRING));
+                mId.setUri(dsUri);
+                metadata.setIdentifier(mId);
+            }
+        } catch (MyconsentServiceException | IllegalArgumentException ex) {
+            LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());
+        }
         if (doesParentResourceExists(metadata)) {
             storeMetadata(metadata);
         } else {
             String msg = "The fdp URI provided is not of type re3:Repository "
-                + "Please try with valid fdp URI";
+                    + "Please try with valid fdp URI";
             throw new IllegalStateException(msg);
-        } 
+        }
+        return dsid;
     }
 
     @Override
-    public void storeDatasetMetaData(@Nonnull DatasetMetadata metadata)
+    public String storeDatasetMetaData(@Nonnull DatasetMetadata metadata)
             throws FairMetadataServiceException, MetadataException {
         Preconditions.checkState(metadata.getParentURI() != null,
                 "No catalog URI is provied. Include dcterms:isPartOf statement "
@@ -216,14 +252,23 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
                 && !datasetSpecs.contains("nil")) {
             metadata.setSpecification(valueFactory.createIRI(datasetSpecs));
         }
-        
-        if (doesParentResourceExists(metadata)) {
+        // Store catalog reference in myconsent 
+        CatalogMetadata cMetadata = retrieveCatalogMetaData(metadata.getParentURI());
+        String token = null;
+        if (doesParentResourceExists(metadata)) {            
+            try {
+                String dsid = cMetadata.getIdentifier().getIdentifier().getLabel();
+                token = myconsentService.createDataRecord(dsid, metadata.getUri().toString());
+            } catch (MyconsentServiceException | IllegalArgumentException ex) {
+                LOGGER.debug("Error making request to myconsent system : " + ex.getMessage());
+            }
             storeMetadata(metadata);
         } else {
             String msg = "The catalog URI provided is not of type dcat:Catalog "
                 + "Please try with valid catalog URI";
             throw new IllegalStateException(msg);
-        } 
+        }
+        return token;
     }
 
     @Override
@@ -240,28 +285,38 @@ public class FairMetaDataServiceImpl implements FairMetaDataService {
             metadata.setSpecification(valueFactory.createIRI(
                     distributionSpecs));
         }
-        
-        try {
-  			ProxyImpl proxy = new ProxyImpl();
-  			IRI downloadURL = metadata.getDownloadURL();
+            // try {
+        	
+                /*Authorization authorization = authorizationService.getAuthorization(agentUrl, 
+                metadata.getUri());
+                
+                //if(accessRights!=null) {        
+                if(authorization!=null){
+        	    
+        		ProxyImpl proxy = new ProxyImpl();
+        		IRI downloadURL = metadata.getDownloadURL();
+  			
+        		URL url = proxy.obfuscateURL( new URL(downloadURL.stringValue()) ); 
+        		metadata.setDownloadURL(new URIImpl(url.toString()));
+                }
+        	//}*/
+  		    
   		    
   			
-  		   URL url = proxy.obfuscateURL( new URL(downloadURL.stringValue()) ); 
-  		   metadata.setDownloadURL(new URIImpl(url.toString()));
-  		    
-  			
-  		} catch (UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException | MalformedURLException | ProxyException e) {
+  	//	} catch (UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException | MalformedURLException | ProxyException e) {
   			// TODO Auto-generated catch block
-  			e.printStackTrace();
-  		}
+  	//		e.printStackTrace();
+  	//	}
         
-        if (doesParentResourceExists(metadata)) {
-            storeMetadata(metadata);
-        } else {
-            String msg = "The dataset URI provided is not of type dcat:Dataset "
-                + "Please try with valid dataset URI";
-            throw new IllegalStateException(msg);
-        }        
+                if (doesParentResourceExists(metadata)) {       
+                    storeMetadata(metadata);
+                } else {
+                    String msg = "The dataset URI provided is not of type dcat:Dataset "
+                        + "Please try with valid dataset URI";
+                    throw new IllegalStateException(msg);
+                } 
+        
+        
     }
     
     @Override
